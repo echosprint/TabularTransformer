@@ -3,3 +3,11 @@ out/
 dataset/
 wandb/
 __pycache__/
+log/
+
+# dot files and such
+.vscode
+.venv
+
+# log files
+*.log
