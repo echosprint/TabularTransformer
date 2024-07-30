@@ -2,3 +2,4 @@ data/
 out/
 dataset/
 wandb/
+__pycache__/
