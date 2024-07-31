@@ -1,10 +1,11 @@
 from enum import Enum
 import pandas as pd
-import numpy as np
 from dataclasses import asdict
 from typing import Literal, get_type_hints
 import sys
 from ast import literal_eval
+import requests
+from tqdm import tqdm
 
 
 class TaskType(Enum):
@@ -144,3 +145,19 @@ class DataclassTool:
                 attempt = val
 
             self.update(key, attempt)
+
+
+def download_file(url: str, fname: str, chunk_size=1024):
+    """Helper function to download a file from a given url"""
+    resp = requests.get(url, stream=True)
+    total = int(resp.headers.get("content-length", 0))
+    with open(fname, "wb") as file, tqdm(
+        desc=fname,
+        total=total,
+        unit="iB",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
+        for data in resp.iter_content(chunk_size=chunk_size):
+            size = file.write(data)
+            bar.update(size)
