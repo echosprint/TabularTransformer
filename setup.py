@@ -1,30 +1,35 @@
 from setuptools import setup, find_packages
 
 setup(
-  name = 'tab-transformer-pytorch',
-  packages = find_packages(),
-  version = '0.3.0',
-  license='MIT',
-  description = 'Tab Transformer - Pytorch',
-  long_description_content_type = 'text/markdown',
-  author = 'Phil Wang',
-  author_email = 'lucidrains@gmail.com',
-  url = 'https://github.com/lucidrains/tab-transformer-pytorch',
-  keywords = [
-    'artificial intelligence',
-    'transformers',
-    'attention mechanism',
-    'tabular data'
-  ],
-  install_requires=[
-    'einops>=0.3',
-    'torch>=1.6'
-  ],
-  classifiers=[
-    'Development Status :: 4 - Beta',
-    'Intended Audience :: Developers',
-    'Topic :: Scientific/Engineering :: Artificial Intelligence',
-    'License :: OSI Approved :: MIT License',
-    'Programming Language :: Python :: 3.6',
-  ],
+    name='tabular-transformer',
+    packages=find_packages(),
+    version='0.1.0',
+    license='MIT',
+    description='Transformer model adapted for tabular data',
+    long_description_content_type='text/markdown',
+    author='Qiao Qian',
+    author_email='qiaoqianda@gmail.com',
+    url='https://github.com/huoyushequ/TabularTransformer',
+    keywords=[
+        'artificial intelligence',
+        'transformers',
+        'attention mechanism',
+        'tabular data'
+    ],
+    install_requires=[
+        'requests>=2.32.1',
+        'torch>=2.3.0',
+        'wandb>=0.17.2',
+        'tqdm>=4.66.4',
+        'scikit-learn>=1.5.0',
+        'pandas>=2.2.1',
+        'numpy>=1.26.4',
+    ],
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Topic :: Scientific/Engineering :: Artificial Intelligence',
+        'License :: OSI Approved :: MIT License',
+        'Programming Language :: Python :: 3.11',
+    ],
 )
