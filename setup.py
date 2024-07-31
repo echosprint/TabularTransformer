@@ -16,7 +16,7 @@ setup(
         'attention mechanism',
         'tabular data'
     ],
-    python_requires='>=3.11',
+    python_requires='>=3.10',
     install_requires=[
         'requests>=2.31.0',
         'torch>=2.3.0',
