@@ -10,8 +10,8 @@ from random import Random
 @dataclass
 class CategoricalStats:
     # categorical variable frequency for all the data
-    valid_cats: Dict[str, int] # {Dog: 500, Cat: 300, Cow: 200}
-    minimal_cout: int # minimal count for a valid category, such like 100
+    valid_cats: Dict[str, int]  # {Dog: 500, Cat: 300, Cow: 200}
+    minimal_cout: int  # minimal count for a valid category, such like 100
 
 
 @dataclass
@@ -35,8 +35,10 @@ def power_transform(value):
     # return -np.log(-value + 1) if value < 0 else np.log(value + 1)
     return -np.log1p(-value) if value < 0 else np.log1p(value)
 
+
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
+
 
 def normalize_data(value, mean, std):
     """
@@ -49,6 +51,7 @@ def normalize_data(value, mean, std):
     # value = sigmoid(value)
     return value
 
+
 def remove_outliers(value, mean, std, n_sigma=4) -> np.number:
     if np.isnan(value):
         return np.nan
@@ -60,6 +63,7 @@ def remove_outliers(value, mean, std, n_sigma=4) -> np.number:
     if value > np.log(1+np.abs(value)) + upper:
         return np.nan
     return value
+
 
 def data_stats(df: pd.DataFrame, min_cat_count: int = 1000):
     """
@@ -74,20 +78,23 @@ def data_stats(df: pd.DataFrame, min_cat_count: int = 1000):
         if is_numeric_dtype(df[col]):
             power_col = df[col].map(lambda x: power_transform(x))
             feature_stats[col] = ScalarStats(
-                min_value = df[col].min(),
-                max_value = df[col].max(),
-                mean = df[col].mean(),
-                std = df[col].std(),
-                logmean = power_col.mean(),
-                logstd = power_col.std(),
-            ) 
+                min_value=df[col].min(),
+                max_value=df[col].max(),
+                mean=df[col].mean(),
+                std=df[col].std(),
+                logmean=power_col.mean(),
+                logstd=power_col.std(),
+            )
             feature_type[col] = FeatureType.SCALAR
         else:
             value_counts = df[col].value_counts()
-            filtered_counts = value_counts[value_counts >= min_cat_count].to_dict()
-            feature_stats[col] = CategoricalStats(valid_cats=filtered_counts, minimal_cout=min_cat_count)
+            filtered_counts = value_counts[value_counts >=
+                                           min_cat_count].to_dict()
+            feature_stats[col] = CategoricalStats(
+                valid_cats=filtered_counts, minimal_cout=min_cat_count)
             feature_type[col] = FeatureType.CATEGORICAL
     return feature_stats, feature_type
+
 
 def generate_feature_vocab(feature_stats) -> Dict[str, int]:
     feature_vocab = {}
@@ -109,13 +116,14 @@ def generate_feature_vocab(feature_stats) -> Dict[str, int]:
             raise ValueError("bad stats")
     return feature_vocab
 
+
 def random_mark_unk(rng: Random, data: pd.DataFrame,
-                    feature_type: Dict[str, FeatureType], 
+                    feature_type: Dict[str, FeatureType],
                     unk_ratio: Optional[float] = None,
                     pretext_target_col: Optional[str] = None,
                     pretext_col_unk_ratio: Optional[float] = None,
                     ):
-    if unk_ratio is None or unk_ratio<= 0:
+    if unk_ratio is None or unk_ratio <= 0:
         assert pretext_target_col is None
         return
 
@@ -136,9 +144,11 @@ def random_mark_unk(rng: Random, data: pd.DataFrame,
             assert pretext_col_unk_ratio is not None and 1 > pretext_col_unk_ratio > 0.5
             pretext_num_replacements = int(data_size * pretext_col_unk_ratio)
             assert pretext_num_replacements > num_replacements
-            random_indices = rng.sample(data.index.to_list(), k=pretext_num_replacements)
+            random_indices = rng.sample(
+                data.index.to_list(), k=pretext_num_replacements)
         else:
-            random_indices = rng.sample(data.index.to_list(), k=num_replacements)
+            random_indices = rng.sample(
+                data.index.to_list(), k=num_replacements)
 
         if feature_type[col] is FeatureType.CATEGORICAL:
             data.loc[random_indices, col] = CATEGORICAL_UNK
@@ -146,6 +156,7 @@ def random_mark_unk(rng: Random, data: pd.DataFrame,
             data.loc[random_indices, col] = np.nan
         else:
             raise ValueError("bad featuretype")
+
 
 def normalize_and_transform(data: pd.DataFrame,
                             feature_type: Dict[str, FeatureType],
@@ -156,17 +167,21 @@ def normalize_and_transform(data: pd.DataFrame,
         col_type = feature_type[col]
         if col_type is FeatureType.SCALAR:
             col_stats: ScalarStats = feature_stats[col]
-            
+
             if remove_outlier:
-                data[col] = data[col].map(lambda x: remove_outliers(x, col_stats.mean, col_stats.std))
+                data[col] = data[col].map(lambda x: remove_outliers(
+                    x, col_stats.mean, col_stats.std))
 
             if apply_power_transform:
                 data[col] = data[col].map(lambda x: power_transform(x))
-                data[col] = data[col].map(lambda x: normalize_data(x, col_stats.logmean, col_stats.logstd))
+                data[col] = data[col].map(lambda x: normalize_data(
+                    x, col_stats.logmean, col_stats.logstd))
             else:
-                data[col] = data[col].map(lambda x: normalize_data(x, col_stats.mean, col_stats.std))
+                data[col] = data[col].map(lambda x: normalize_data(
+                    x, col_stats.mean, col_stats.std))
 
-def preprocess(rng: Random, 
+
+def preprocess(rng: Random,
                data: pd.DataFrame,
                feature_type: Dict[str, FeatureType],
                feature_stats: Dict[str, Union[CategoricalStats, ScalarStats]],
@@ -176,11 +191,13 @@ def preprocess(rng: Random,
                pretext_target_col: Optional[str] = None,
                pretext_col_unk_ratio: Optional[float] = None,
                ) -> pd.DataFrame:
-    data = data.copy() 
+    data = data.copy()
     data.reset_index(drop=True, inplace=True)
 
-    normalize_and_transform(data, feature_type, feature_stats, apply_power_transform, remove_outlier)
+    normalize_and_transform(data, feature_type, feature_stats,
+                            apply_power_transform, remove_outlier)
 
-    random_mark_unk(rng, data, feature_type, unk_ratio, pretext_target_col, pretext_col_unk_ratio)
+    random_mark_unk(rng, data, feature_type, unk_ratio,
+                    pretext_target_col, pretext_col_unk_ratio)
 
     return data

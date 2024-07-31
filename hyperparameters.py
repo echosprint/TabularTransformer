@@ -59,7 +59,7 @@ class HyperParameters(DataclassTool):
     # adamw optimizer
     gradient_accumulation_steps: int = 1  # used to simulate larger batch sizes
     learning_rate: float = 5e-4  # max learning rate
-    max_iters: int = 100000  # total number of training iterations
+    max_epochs: int = 200  # total number of training epochs
     weight_decay: float = 1e-1
     beta1: float = 0.9
     beta2: float = 0.95

@@ -5,6 +5,7 @@ PREDICTSCRIPT := predict.py
 
 .PHONY: pretrain pretrain1 pretrain2 finetune train predict test clean
 
+
 ROUND1_CONTRAST_ARGS = --init_from=scratch --data_file=income/income_evaluation_train \
 					   --loss_type=4 --pretext_with_label=True \
 					   --pretext_target_col=" education" \

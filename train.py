@@ -26,9 +26,6 @@ hp.config_from_cli()
 config = hp.asdict()  # will be useful for logging
 # -----------------------------------------------------------------------------
 
-# fixing some hyperparams to sensible defaults
-lr_decay_iters = hp.max_iters  # should be ~= max_iters per Chinchilla
-min_lr = 0.0  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
 
 # validating checks
 assert hp.feature_vocab_size == 2048, "The feature vocab size for TabularTransformer is 2048 now"
@@ -181,7 +178,8 @@ if hp.compile:
     unoptimized_model = model
     model = torch.compile(model)  # requires PyTorch 2.0
 
-loss_estimate_rng = random.Random(19324325383)
+loss_estimate_rng = random.Random(hp.dataset_seed)
+train_rng = random.Random(hp.dataset_seed)
 # helps estimate an arbitrarily accurate loss over either split using many batches
 
 
@@ -190,17 +188,20 @@ def estimate_loss():
     out = {}
     model.eval()
     for split in ["train", "val"]:
-        seed = loss_estimate_rng.randint(1024, 1024*1024)
-        # make seed to estimate loss on different data
-        batch_iter = iter_batches(
-            split=split, seed=seed, unk_ratio=hp.unk_ratio)
+        k = 0
         losses = torch.zeros(hp.eval_iters)  # keep on CPU
-        for k in range(hp.eval_iters):
-            X, Y = next(batch_iter)
-            with ctx:
-                logits = model(X, Y)
-                loss = raw_model.last_loss
-            losses[k] = loss.item()
+        while (k < hp.eval_iters):
+            seed = loss_estimate_rng.randint(1024, 1024*1024)
+            batch_iter = iter_batches(
+                split=split, seed=seed, unk_ratio=hp.unk_ratio)
+            for X, Y in batch_iter:
+                with ctx:
+                    logits = model(X, Y)
+                    loss = raw_model.last_loss
+                losses[k] = loss.item()
+                k += 1
+                if k >= hp.eval_iters:
+                    break
         out[split] = losses.mean()
     model.train()
     return out
@@ -230,97 +231,112 @@ if hp.wandb_log and master_process:
     import wandb
     wandb.init(project=hp.wandb_project, name=hp.wandb_run_name, config=config)
 
-# training loop
-train_batch_iter = iter_batches(
-    split="train", seed=hp.dataset_seed, unk_ratio=hp.unk_ratio)
-X, Y = next(train_batch_iter)  # fetch the very first batch
+# create iter batch only to instantiate the SingletonDataset
+_ = iter_batches(split="train", seed=hp.dataset_seed, unk_ratio=None)
+
+num_batches_per_epoch = Task.get_dataset_attributes(
+)['train_dataset_size'] // hp.batch_size
+
+# fixing some hyperparams to sensible defaults
+# should be ~= max_iters per Chinchilla
+lr_decay_iters = hp.max_epochs * num_batches_per_epoch
+min_lr = 0.0  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
+
 t0 = time.time()
 local_iter_num = 0  # number of iterations in the lifetime of this process
 raw_model = model
 running_mfu = -1.0
+for _epoch in range(hp.max_epochs):
+    batch_seed = train_rng.randint(1024, 1024*1024)
+    train_batch_iter = iter_batches(
+        split="train", seed=batch_seed, unk_ratio=hp.unk_ratio)
+    # iterate over the dataset
+    for X, Y in train_batch_iter:
 
-while True:
-    # determine and set the learning rate for this iteration
-    lr = get_lr(iter_num) if hp.decay_lr else hp.learning_rate
-    if not raw_model.finetune:
-        for param_group in optimizer.param_groups:
-            param_group["lr"] = lr
+        # determine and set the learning rate for this iteration
+        lr = get_lr(iter_num) if hp.decay_lr else hp.learning_rate
+        if not raw_model.finetune:
+            for param_group in optimizer.param_groups:
+                param_group["lr"] = lr
 
-    # evaluate the loss on train/val sets and write checkpoints
-    if iter_num % hp.eval_interval == 0 and master_process:
-        losses = estimate_loss()
-        print(f"step {iter_num}: train loss {
-              losses['train']:.4f}, val loss {losses['val']:.4f}")
-        if hp.wandb_log:
-            try:
-                wandb.log(
-                    {
-                        "iter": iter_num,
-                        "tokens": iter_num * tokens_per_iter,
-                        "loss/train": losses["train"],
-                        "loss/val": losses["val"],
-                        "lr": lr,
-                        "mfu": running_mfu * 100,  # convert to percentage
-                    }, step=iter_num
-                )
-            except Exception as e:
-                print(f"logging to wandb failed: {e}")
-        if losses["val"] < best_val_loss or hp.always_save_checkpoint:
-            best_val_loss = losses["val"]
-            if iter_num > 0:
-                checkpoint = {
-                    "model": raw_model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "model_args": model_args,
-                    "iter_num": iter_num,
-                    "best_val_loss": best_val_loss,
-                    "config": config,
-                    "dataset_attr": Task.get_dataset_attributes(),
-                }
-                print(f"saving checkpoint to {hp.out_dir}")
-                torch.save(checkpoint, os.path.join(hp.out_dir, "ckpt.pt"))
-    if iter_num == 0 and hp.eval_only:
-        break
+        # evaluate the loss on train/val sets and write checkpoints
+        if iter_num % hp.eval_interval == 0 and master_process:
+            losses = estimate_loss()
+            print(f"step {iter_num}: train loss {
+                losses['train']:.4f}, val loss {losses['val']:.4f}")
+            if hp.wandb_log:
+                try:
+                    wandb.log(
+                        {
+                            "iter": iter_num,
+                            "tokens": iter_num * tokens_per_iter,
+                            "loss/train": losses["train"],
+                            "loss/val": losses["val"],
+                            "lr": lr,
+                            "mfu": running_mfu * 100,  # convert to percentage
+                        }, step=iter_num
+                    )
+                except Exception as e:
+                    print(f"logging to wandb failed: {e}")
+            if losses["val"] < best_val_loss or hp.always_save_checkpoint:
+                best_val_loss = losses["val"]
+                if iter_num > 0:
+                    checkpoint = {
+                        "model": raw_model.state_dict(),
+                        "optimizer": optimizer.state_dict(),
+                        "model_args": model_args,
+                        "iter_num": iter_num,
+                        "best_val_loss": best_val_loss,
+                        "config": config,
+                        "dataset_attr": Task.get_dataset_attributes(),
+                    }
+                    print(f"saving checkpoint to {hp.out_dir}")
+                    torch.save(checkpoint, os.path.join(
+                        hp.out_dir, "ckpt.pt"))
 
-    # forward backward update, with optional gradient accumulation to simulate larger batch size
-    # and using the GradScaler if data type is float16
-    for micro_step in range(hp.gradient_accumulation_steps):
-        with ctx:
-            logits = model(X, Y)
-            loss = raw_model.last_loss
-            loss = loss / hp.gradient_accumulation_steps
-        # immediately async prefetch next batch while model is doing the forward pass on the GPU
-        X, Y = next(train_batch_iter)
-        # backward pass, with gradient scaling if training in fp16
-        scaler.scale(loss).backward()
-    # clip the gradient
-    if hp.grad_clip != 0.0:
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), hp.grad_clip)
-    # step the optimizer and scaler if training in fp16
-    scaler.step(optimizer)
-    scaler.update()
-    # flush the gradients as soon as we can, no need for this memory anymore
-    optimizer.zero_grad(set_to_none=True)
+        if iter_num == 0 and hp.eval_only:
+            break
 
-    # timing and logging
-    t1 = time.time()
-    dt = t1 - t0
-    t0 = t1
-    if iter_num % hp.log_interval == 0 and master_process:
-        # get loss as float, scale up due to the divide above. note: this is a CPU-GPU sync point
-        lossf = loss.item() * hp.gradient_accumulation_steps
-        if local_iter_num >= 5:  # let the training loop settle a bit
-            mfu = raw_model.estimate_mfu(
-                hp.batch_size * hp.gradient_accumulation_steps, dt)
-            running_mfu = mfu if running_mfu == -1.0 else 0.9 * running_mfu + 0.1 * mfu
-        print(
-            f"{iter_num} | loss {lossf:.4f} | lr {lr:e} | {
-                dt*1000:.2f}ms | mfu {running_mfu*100:.2f}%"
-        )
-    iter_num += 1
-    local_iter_num += 1
+        # forward backward update, with optional gradient accumulation to simulate larger batch size
+        # and using the GradScaler if data type is float16
+        for micro_step in range(hp.gradient_accumulation_steps):
+            with ctx:
+                logits = model(X, Y)
+                loss = raw_model.last_loss
+                loss = loss / hp.gradient_accumulation_steps
+            # immediately async prefetch next batch while model is doing the forward pass on the GPU
+            # X, Y = next(train_batch_iter)
+            # backward pass, with gradient scaling if training in fp16
+            scaler.scale(loss).backward()
+        # clip the gradient
+        if hp.grad_clip != 0.0:
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(), hp.grad_clip)
+        # step the optimizer and scaler if training in fp16
+        scaler.step(optimizer)
+        scaler.update()
+        # flush the gradients as soon as we can, no need for this memory anymore
+        optimizer.zero_grad(set_to_none=True)
 
-    # termination conditions
-    if iter_num > hp.max_iters:
+        # timing and logging
+        t1 = time.time()
+        dt = t1 - t0
+        t0 = t1
+        if iter_num % hp.log_interval == 0 and master_process:
+            # get loss as float, scale up due to the divide above. note: this is a CPU-GPU sync point
+            lossf = loss.item() * hp.gradient_accumulation_steps
+            if local_iter_num >= 5:  # let the training loop settle a bit
+                mfu = raw_model.estimate_mfu(
+                    hp.batch_size * hp.gradient_accumulation_steps, dt)
+                running_mfu = mfu if running_mfu == -1.0 else 0.9 * running_mfu + 0.1 * mfu
+            print(
+                f"{iter_num} | loss {lossf:.4f} | lr {lr:e} | {
+                    dt*1000:.2f}ms | mfu {running_mfu*100:.2f}%"
+            )
+        iter_num += 1
+        local_iter_num += 1
+
+    # two nested loops need to break twice
+    if hp.eval_only:
         break

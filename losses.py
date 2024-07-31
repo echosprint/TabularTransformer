@@ -7,9 +7,11 @@ import torch
 import torch.nn as nn
 import math
 
+
 class SupConLoss(nn.Module):
     """Supervised Contrastive Learning: https://arxiv.org/pdf/2004.11362.pdf.
     It also supports the unsupervised contrastive loss in SimCLR"""
+
     def __init__(self, temperature=0.2):
         super(SupConLoss, self).__init__()
         self.temperature = temperature
@@ -23,10 +25,11 @@ class SupConLoss(nn.Module):
         Returns:
             A loss scalar.
         """
-        
+
         device = features.device
 
-        assert len(features.shape) == 2, "`features` needs to be [bsz, feature_dim]"
+        assert len(
+            features.shape) == 2, "`features` needs to be [bsz, feature_dim]"
         assert len(labels.shape) == 1, "`labels` needs to be shape [bsz]"
 
         assert features.shape[0] == labels.shape[0]
@@ -41,7 +44,8 @@ class SupConLoss(nn.Module):
 
         anchor_dot_contrast = torch.matmul(features, features.T)
         logits = torch.div(anchor_dot_contrast, self.temperature)
-        logits_mask = 1.0 - torch.eye(batch_size, dtype=features.dtype, device=device)
+        logits_mask = 1.0 - \
+            torch.eye(batch_size, dtype=features.dtype, device=device)
 
         mask = mask * logits_mask
 

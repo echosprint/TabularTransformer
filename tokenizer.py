@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 from util import FeatureType, SCALAR_NUMERIC, SCALAR_UNK, CATEGORICAL_UNK
 
+
 class Tokenizer():
+
     """
     sample tabular data, [UNK] means the value is missing or anomaly, we treated as UNKNOWN
     +---------+-------+---------------+---------------+
@@ -89,7 +91,7 @@ class Tokenizer():
     @property
     def feature_vocab_size(self) -> int:
         return len(self.feature_vocab)
-    
+
     @property
     def feature_vocab_item(self) -> List[str]:
         return list(self.feature_vocab.keys())
@@ -100,8 +102,8 @@ class Tokenizer():
         feature_weight_list: List[Tensor] = []
 
         def map_categorical(col, cat):
-            key =  f"{col.strip()}_{str(cat).strip()}"
-            key_unk =  f"{col.strip()}_{CATEGORICAL_UNK}"
+            key = f"{col.strip()}_{str(cat).strip()}"
+            key_unk = f"{col.strip()}_{CATEGORICAL_UNK}"
             return self.feature_vocab[key] if key in self.feature_vocab else self.feature_vocab[key_unk]
 
         def map_scalar(col, sca):
@@ -125,5 +127,5 @@ class Tokenizer():
                 feature_weight_list.append(v1)
             else:
                 raise ValueError("column type can be CATEGORICAL or SCALAR")
-        
+
         return torch.stack(feature_tokens_list, dim=1), torch.stack(feature_weight_list, dim=1)
