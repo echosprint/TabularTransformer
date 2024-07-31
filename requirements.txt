@@ -1,5 +1,6 @@
 tqdm
 numpy
 pandas
+scikit-learn
 torch
 requests
