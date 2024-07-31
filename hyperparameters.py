@@ -16,6 +16,8 @@ class HyperParameters(DataclassTool):
     always_save_checkpoint: bool = False
     init_from: Literal["scratch", "resume", "resume_with_new_head"] = "scratch"
     checkpoint: str = "ckpt.pt"
+    input_checkpoint: str = None
+    output_checkpoint: str = None
     reset_iter_when_resume: bool = True  # reset the iter number when resume
 
     # wandb logging

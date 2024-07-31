@@ -111,7 +111,8 @@ if hp.init_from == "scratch":
 elif hp.init_from in ("resume", "resume_with_new_head"):
     print(f"Resuming training from {hp.out_dir}")
     # resume training from a checkpoint.
-    ckpt_path = os.path.join(hp.out_dir, hp.checkpoint)
+    ckpt_path = os.path.join(
+        hp.out_dir, hp.input_checkpoint if hp.input_checkpoint is not None else hp.checkpoint)
     checkpoint = torch.load(ckpt_path, map_location=hp.device)
     checkpoint_model_args = checkpoint["model_args"]
 
@@ -292,7 +293,7 @@ for _epoch in range(hp.max_epochs):
                     }
                     print(f"saving checkpoint to {hp.out_dir}")
                     torch.save(checkpoint, os.path.join(
-                        hp.out_dir, "ckpt.pt"))
+                        hp.out_dir, hp.output_checkpoint if hp.output_checkpoint is not None else hp.checkpoint))
 
         if iter_num == 0 and hp.eval_only:
             break
