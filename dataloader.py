@@ -4,7 +4,7 @@ import random
 from typing import Tuple, Callable, Union, Optional, Dict
 from preprocessor import data_stats, generate_feature_vocab, preprocess, CategoricalStats, ScalarStats
 from tokenizer import Tokenizer
-from util import TaskType, Singleton, CATEGORICAL_UNK
+from util import TaskType, Singleton, CATEGORICAL_UNK, download
 import numpy as np
 
 
@@ -255,3 +255,7 @@ class Task:
             "validate_dataset_size":  sdata_instance.validate_dataset_size,
         }
         return dataset_att
+
+    @staticmethod
+    def download_dataset(url: str, save_fname: str):
+        download(url, save_fname)
