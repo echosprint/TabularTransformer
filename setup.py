@@ -16,6 +16,7 @@ setup(
         'attention mechanism',
         'tabular data'
     ],
+    python_requires='>=3.11',
     install_requires=[
         'requests>=2.31.0',
         'torch>=2.3.0',
@@ -24,7 +25,6 @@ setup(
         'scikit-learn>=1.3.2',
         'pandas>=2.1.0',
         'numpy>=1.26.4',
-        'python>=3.10.12'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
