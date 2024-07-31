@@ -3,14 +3,14 @@ predict from the trained model with PyTorch
 """
 from contextlib import nullcontext
 import torch
-from preprocessor import preprocess
-from tabular_transformer import ModelArgs, TabularTransformer
-from tokenizer import Tokenizer
-from dataloader import load_data
+from .preprocessor import preprocess
+from .tabular_transformer import ModelArgs, TabularTransformer
+from .tokenizer import Tokenizer
+from .dataloader import load_data
 import random
-from util import LossType
+from .util import LossType
 import numpy as np
-from metrics import calAUC
+from .metrics import calAUC
 
 
 # -----------------------------------------------------------------------------

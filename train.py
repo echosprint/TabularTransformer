@@ -14,9 +14,7 @@ from datetime import datetime
 from functools import partial
 
 import torch
-from hyperparameters import HyperParameters
-from tabular_transformer import TabularTransformer, ModelArgs
-from dataloader import Task
+from tabular_transformer import TabularTransformer, ModelArgs, Task, HyperParameters
 
 # load the default HyperParameters
 hp = HyperParameters()

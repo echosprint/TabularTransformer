@@ -1,7 +1,7 @@
 from dataclasses import dataclass, fields, asdict
 from typing import Literal, get_type_hints
 from datetime import datetime
-from util import DataclassTool
+from .util import DataclassTool
 
 
 @dataclass

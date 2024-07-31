@@ -7,8 +7,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
-from util import LossType
-from losses import SupConLoss
+from .util import LossType
+from .losses import SupConLoss
 
 
 @dataclass
