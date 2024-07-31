@@ -8,7 +8,7 @@ from util import DataclassTool
 class HyperParameters(DataclassTool):
     # I/O
     out_dir: str = "out"
-    eval_interval: int = 2000
+    eval_interval: int = 1000
     log_interval: int = 1
     eval_iters: int = 100
     eval_only: bool = False  # if True, script exits right after the first eval
@@ -20,7 +20,7 @@ class HyperParameters(DataclassTool):
 
     # wandb logging
     wandb_log: bool = False  # disabled by default
-    wandb_project: str = "data_analyst_skill_competition"
+    wandb_project: str = "TabularTransformer"
     wandb_run_name: str = "run_" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
 
     # data
@@ -46,8 +46,8 @@ class HyperParameters(DataclassTool):
     pretext_col_unk_ratio: float = 0.75
 
     # model
-    dim: int = 1024
-    n_layers: int = 16
+    dim: int = 64
+    n_layers: int = 6
     n_heads: int = 8
     output_dim: int = 1  # final out dimension
     output_hidden_dim: int = 128
