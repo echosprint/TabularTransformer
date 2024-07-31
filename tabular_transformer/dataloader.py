@@ -56,10 +56,8 @@ class SingletonDataset(Singleton):
             if pretext_with_label:
                 self.dataset = self.dataset.iloc[:, :-1]
 
-            assert f"pretext_target_{
-                pretext_target_col.strip()}" not in self.dataset.columns
-            self.dataset[f"pretext_target_{
-                pretext_target_col.strip()}"] = self.dataset[pretext_target_col].copy()
+            assert f"pretext_target_{pretext_target_col.strip()}" not in self.dataset.columns  # noqa: E501
+            self.dataset[f"pretext_target_{pretext_target_col.strip()}"] = self.dataset[pretext_target_col].copy()  # noqa: E501
 
         self.dataset_x, self.dataset_y = self.dataset.iloc[:,
                                                            :-1], self.dataset.iloc[:, [-1]]

@@ -161,5 +161,5 @@ if truth_y is not None:
     print(f"binary cross entropy loss: {bce_loss:.4f}")
     auc_score = calAUC(truth_y.to_numpy(), logits_array)
     print(f"auc score: {auc_score}")
-    print(f"samples: {accuracy_accum['n_samples']}, accuracy: {
-          accuracy_accum['right'] / accuracy_accum['n_samples']:.2f}")
+    print(f"samples: {accuracy_accum['n_samples']}, "
+          f"accuracy: {accuracy_accum['right'] / accuracy_accum['n_samples']:.2f}")
