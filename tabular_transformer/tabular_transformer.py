@@ -306,8 +306,8 @@ class TabularTransformer(nn.Module):
         # filter out those that do not require grad
         param_dict = {pn: p for pn, p in param_dict.items() if p.requires_grad}
         num_params = sum(p.numel() for pn, p in param_dict.items())
-        print(f"num parameter tensors: {
-              len(param_dict)}, with {num_params:,} parameters")
+        print("num parameter tensors: "
+              f"{len(param_dict)}, with {num_params:,} parameters")
         if self.finetune:
             print("finetune mode pretrained parameters learning rate scaled by 0.1")
             finetune_params = [
