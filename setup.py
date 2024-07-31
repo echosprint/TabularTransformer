@@ -17,13 +17,14 @@ setup(
         'tabular data'
     ],
     install_requires=[
-        'requests>=2.32.1',
+        'requests>=2.31.0',
         'torch>=2.3.0',
         'wandb>=0.17.2',
         'tqdm>=4.66.4',
-        'scikit-learn>=1.5.0',
-        'pandas>=2.2.1',
+        'scikit-learn>=1.3.2',
+        'pandas>=2.1.0',
         'numpy>=1.26.4',
+        'python>=3.10.12'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
