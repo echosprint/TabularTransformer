@@ -1,7 +1,7 @@
 from dataclasses import dataclass, fields, asdict
 from typing import Literal, get_type_hints
 from datetime import datetime
-from .util import DataclassTool
+from .data_common import DataclassTool
 
 
 @dataclass
@@ -39,8 +39,7 @@ class HyperParameters(DataclassTool):
     dataset_seed: int = 42
 
     # train
-    # BINCLASS = 1 MULTICLASS = 2 REGRESSION MSE = 3 SUPCON = 4
-    loss_type: Literal[1, 2, 3, 4] = 1
+    loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'] = 'BINCLASS'  # noqa: E501
     validate_split: float = 0.2
     # pretrain (predict train / contrastive train)
     pretext_with_label: bool = True  # whether pretrain dataset has label in last column
