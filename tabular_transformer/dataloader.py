@@ -4,7 +4,8 @@ import random
 from typing import Tuple, Callable, Union, Optional, Dict
 from .preprocessor import data_stats, generate_feature_vocab, preprocess, CategoricalStats, ScalarStats
 from .tokenizer import Tokenizer
-from .util import TaskType, Singleton, CATEGORICAL_UNK, download
+from .util import TaskType, CATEGORICAL_UNK
+from .data_common import Singleton, download
 import numpy as np
 
 
