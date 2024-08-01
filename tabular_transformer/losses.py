@@ -1,8 +1,3 @@
-"""
-Author: Yonglong Tian (yonglong@mit.edu)
-Date: May 07, 2020
-"""
-
 import torch
 import torch.nn as nn
 import math
