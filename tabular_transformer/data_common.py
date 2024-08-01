@@ -7,7 +7,7 @@ from ast import literal_eval
 import requests
 from tqdm import tqdm
 import os
-from dataclasses import asdict
+from dataclasses import asdict, fields
 from typing import Literal, get_type_hints
 
 
@@ -100,7 +100,38 @@ class Singleton(metaclass=SingletonMeta):
         return cls._instances[cls] if cls in cls._instances else None
 
 
-class DataclassTool:
+class TypeCheckMeta(type):
+    def __call__(cls, *args, **kwargs):
+        # Check if any positional arguments are passed
+        if args:
+            raise TypeError(f"{cls} only accepts keyword arguments.")
+
+        # Get the field definitions with type hints
+        field_defs = {f.name: f.type for f in fields(cls)}
+
+        all_args = {**kwargs}
+
+        # Perform type checking
+        for name, val in all_args.items():
+            expect_type = field_defs.get(name)
+            assert expect_type is not None, f"bad {cls} arguments `{name}`"
+            if expect_type is float and isinstance(val, int):
+                val = float(val)
+            # Special case for Literal
+            if hasattr(expect_type, "__origin__") and expect_type.__origin__ is Literal:
+                assert val in expect_type.__args__ and isinstance(
+                    val, type(expect_type.__args__[0])
+                ), f"{val} not in {expect_type.__args__}."
+            else:
+                assert isinstance(
+                    val, expect_type
+                ), f"{cls} init parameter type mismatch, key: ({name}) expect type: {expect_type}, pass value: {val}"
+
+        # Call the original __init__ method
+        return super().__call__(*args, **kwargs)
+
+
+class DataclassTool(metaclass=TypeCheckMeta):
     def __init__(self):
         raise NotImplementedError("DataclassTool should not be instantiated.")
 
