@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import ABC, ABCMeta, abstractmethod
 import pandas as pd
 from pathlib import Path
 from typing import Union
 
 
-class ReaderMeta(type):
+class ReaderMeta(ABCMeta):
     def __new__(cls, name, bases, dct):
         # Wrap the read_data_file method if it exists
         original_read_data_file = dct.get('read_data_file')
@@ -18,7 +18,7 @@ class ReaderMeta(type):
         return super().__new__(cls, name, bases, dct)
 
 
-class DataReader(ABC, metaclass=ReaderMeta):
+class DataReader(metaclass=ReaderMeta):
     @abstractmethod
     def read_data_file(self, file_path: Union[str, Path]) -> pd.DataFrame:
         pass
@@ -48,13 +48,17 @@ class DataReader(ABC, metaclass=ReaderMeta):
 
     def post_read_data(self, df: pd.DataFrame):
 
+        assert isinstance(
+            df, pd.DataFrame), "method `read_data_file` must return pd.DataFrame"
+
         for col in self.ensure_numerical_cols:
             assert col in df.columns, f"""ensure_numerical_cols: {
                 col} not in data columns"""
             try:
-                df[col] = df[col].astype('float64')
+                df[col] = pd.to_numeric(df[col], errors='raise')
             except ValueError as e:
-                print(f"Failed to cast {col} to float64: {e}")
+                raise ValueError(
+                    f"""Failed to apply `pd.to_numeric` on column [{col}]: {e}""")
 
         for col in self.ensure_categorical_cols:
             assert col in df.columns, f"""ensure_categorical_cols: {
@@ -62,4 +66,5 @@ class DataReader(ABC, metaclass=ReaderMeta):
             try:
                 df[col] = df[col].astype(str)
             except ValueError as e:
-                print(f"Failed to cast {col} to string: {e}")
+                raise ValueError(
+                    f"Failed to cast column [{col}] to string: {e}")
