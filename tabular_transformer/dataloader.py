@@ -5,7 +5,7 @@ from typing import Tuple, Callable, Union, Optional, Dict
 from .preprocessor import data_stats, generate_feature_vocab, preprocess, CategoricalStats, ScalarStats
 from .tokenizer import Tokenizer
 from .util import TaskType, CATEGORICAL_UNK
-from .data_common import Singleton, download
+from .data_common import DataReader, download
 import numpy as np
 
 
@@ -17,7 +17,7 @@ def load_data(datafile: str) -> pd.DataFrame:
 
 class RawDataset():
 
-    datafile: str
+    datareader: DataReader
     min_cat_count: int
     feature_vocab_size: int
     num_cols: int
@@ -26,7 +26,7 @@ class RawDataset():
     pretext_target_col: Optional[str]
 
     def __init__(self,
-                 datafile: str,
+                 datareader: DataReader,
                  max_seq_len: int = 1024,
                  min_cat_count: Union[int, float] = 200,
                  validate_split: float = 0.2,
@@ -35,12 +35,11 @@ class RawDataset():
                  seed: Optional[int] = None,
                  ):
 
-        self.datafile = datafile
-        filename = f"{self.datafile}.csv"
+        self.datareader = datareader
         self.seed = seed
         # read the dataset into memory
-        print(f"load dataset from file: {filename}")
-        self.dataset = load_data(filename)
+        print(f"load dataset from file: {self.datareader.file_path}")
+        self.dataset = self.datareader.read_data_file()
 
         self.pretext_target_col = pretext_target_col
 
@@ -74,11 +73,6 @@ class RawDataset():
         self.feature_vocab_size = len(self.feature_vocab)
 
         self.tokenizer = Tokenizer(self.feature_vocab, self.stats_x[1])
-
-        # if pretext_target_col is not None:
-        #     # after all the stats step, keep the `pretext_target_col` but fill with UNK
-        #     # this make sure different pretrain step has same feature vocab
-        #     self.dataset[pretext_target_col] = CATEGORICAL_UNK
 
         self.train_dataset, self.validate_dataset = self._split_dataset(
             validate_split=validate_split)
