@@ -37,6 +37,9 @@ class Trainer:
     train_paras: TrainParameters
     finetune_paras: TrainParameters
 
+    # finetune mode
+    finetune_mode: bool
+
     def __init__(self, hp: HyperParameters):
         assert isinstance(hp, HyperParameters)
         self.hp = hp
@@ -65,6 +68,8 @@ class Trainer:
                                            pretext_with_label=pretext_with_label)
         if pretext_target_col is not None:
             self.train_paras.update('pretext_target_col', pretext_target_col)
+
+        self.finetune_mode = False
 
         self._create_train_dataset()
 
@@ -96,6 +101,8 @@ class Trainer:
                                               learning_rate=learning_rate, output_dim=output_dim,
                                               loss_type=loss_type, eval_interval=eval_interval,
                                               validate_split=validate_split)
+
+        self.finetune_mode = True
 
         self._create_finetune_dataset()
 

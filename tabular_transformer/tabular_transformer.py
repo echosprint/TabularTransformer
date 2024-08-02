@@ -27,7 +27,7 @@ class ModelArgs:
     norm_eps: float = 1e-5
     max_seq_len: int = 1024  # max columns of tabular data
     dropout: float = 0.0
-    finetune: bool = False  # enable finetune to adjust the learn rate
+    # finetune: bool = False  # enable finetune to adjust the learn rate
 
 
 class RMSNorm(torch.nn.Module):
@@ -244,7 +244,7 @@ class TabularTransformer(nn.Module):
         self.transformer = Transformer(params)
         self.output = ForwardOutPut(params)
         self.sup_con_loss = SupConLoss() if self.loss_type is LossType.SUPCON else None
-        self.finetune = params.finetune
+        # self.finetune = params.finetune
         # init all weights
         self.apply(self._init_weights)
 
