@@ -8,7 +8,7 @@ from .data_common import DataclassTool
 class HyperParameters(DataclassTool):
     # I/O
     out_dir: str = "out"
-    eval_interval: int = 1000
+    # eval_interval: int = 1000
     log_interval: int = 1
     eval_iters: int = 100
     eval_only: bool = False  # if True, script exits right after the first eval
@@ -27,7 +27,7 @@ class HyperParameters(DataclassTool):
 
     # data
     data_file: str = "income/income_evaluation_train"
-    batch_size: int = 128  # if gradient_accumulation_steps > 1, this is the micro-batch size
+    # batch_size: int = 128  # if gradient_accumulation_steps > 1, this is the micro-batch size
     # the dataset feature vocab size must <= transformer feature vocab size
     # feature_vocab_size: int = 2048
     num_cols: int = 14
@@ -39,18 +39,18 @@ class HyperParameters(DataclassTool):
     dataset_seed: int = 42
 
     # train
-    loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'] = 'BINCLASS'  # noqa: E501
-    validate_split: float = 0.2
+    # loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'] = 'BINCLASS'  # noqa: E501
+    # validate_split: float = 0.2
     # pretrain (predict train / contrastive train)
-    pretext_with_label: bool = True  # whether pretrain dataset has label in last column
-    pretext_target_col: str = None  # pretrain pretext target column name
+    # pretext_with_label: bool = True  # whether pretrain dataset has label in last column
+    # pretext_target_col: str = None  # pretrain pretext target column name
     pretext_col_unk_ratio: float = 0.75
 
     # model
     dim: int = 64
     n_layers: int = 6
     n_heads: int = 8
-    output_dim: int = 1  # final out dimension
+    # output_dim: int = 1  # final out dimension
     output_hidden_dim: int = 128
     output_forward_dim: int = 8
     multiple_of: int = 32
@@ -59,10 +59,10 @@ class HyperParameters(DataclassTool):
 
     # adamw optimizer
     gradient_accumulation_steps: int = 1  # used to simulate larger batch sizes
-    learning_rate: float = 5e-4  # max learning rate
+    # learning_rate: float = 5e-4  # max learning rate
     # for pretrained model paras scale lr to very low, 0. means frozen
     finetune_lr_scaler: float = 0.1
-    max_epochs: int = 200  # total number of training epochs
+    # max_epochs: int = 200  # total number of training epochs
     weight_decay: float = 1e-1
     beta1: float = 0.9
     beta2: float = 0.95
@@ -79,3 +79,17 @@ class HyperParameters(DataclassTool):
     dtype: Literal["float32", "bfloat16", "float16"] = "bfloat16"
     # use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+
     compile: bool = False
+
+
+@dataclass
+class TrainParameters(DataclassTool):
+
+    train_epochs: int = 200
+    batch_size: int = 128
+    learning_rate: float = 5e-4
+    output_dim: int = 1
+    loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'] = 'BINCLASS'  # noqa: E501
+    eval_interval: int = 100,
+    validate_split: float = 0.2
+    pretext_target_col: str = None
+    pretext_with_label: bool = True
