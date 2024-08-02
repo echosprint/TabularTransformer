@@ -19,7 +19,6 @@ class RawDataset():
 
     datareader: DataReader
     min_cat_count: int
-    feature_vocab_size: int
     num_cols: int
     task_type: TaskType
     target_map: Optional[Dict[str, int]]
@@ -27,7 +26,6 @@ class RawDataset():
 
     def __init__(self,
                  datareader: DataReader,
-                 max_seq_len: int = 1024,
                  min_cat_count: Union[int, float] = 200,
                  validate_split: float = 0.2,
                  pretext_with_label: bool = True,
@@ -67,12 +65,11 @@ class RawDataset():
         self.stats_y = data_stats(self.dataset_y, min_cat_count=1)
 
         self.num_cols = len(self.stats_x[1])
-        assert self.num_cols == max_seq_len
 
         self.feature_vocab = generate_feature_vocab(self.stats_x[0])
         self.feature_vocab_size = len(self.feature_vocab)
 
-        self.tokenizer = Tokenizer(self.feature_vocab, self.stats_x[1])
+        self.feature_type = self.stats_x[1]
 
         self.train_dataset, self.validate_dataset = self._split_dataset(
             validate_split=validate_split)
@@ -114,6 +111,20 @@ class RawDataset():
             self.task_type = TaskType.REGRESSION
             self.target_map = None
         return self.task_type
+
+    def dataset_attr(self):
+        dataset_att = {
+            "feature_vocab_size": self.feature_vocab_size,
+            "feature_vocab": self.feature_vocab,
+            "feature_stats": self.stats_x[0],
+            "feature_type":  self.stats_x[1],
+            "num_cols":      self.num_cols,
+            "task_type":     self.task_type,
+            "target_map":    self.target_map,
+            "train_dataset_size":  self.train_dataset_size,
+            "validate_dataset_size":  self.validate_dataset_size,
+        }
+        return dataset_att
 
 
 class PretokDataset(torch.utils.data.IterableDataset):
@@ -225,23 +236,6 @@ class Task:
                 y = y.to(device, non_blocking=True)
                 yield (feature_tokens, feature_weight), y
         return generator()
-
-    @staticmethod
-    def get_dataset_attributes():
-        sdata_instance: SingletonDataset = SingletonDataset.get_instance()
-        assert sdata_instance is not None
-        dataset_att = {
-            "feature_vocab_size": sdata_instance.feature_vocab_size,
-            "feature_vocab": sdata_instance.feature_vocab,
-            "feature_stats": sdata_instance.stats_x[0],
-            "feature_type":  sdata_instance.stats_x[1],
-            "num_cols":      sdata_instance.num_cols,
-            "task_type":     sdata_instance.task_type,
-            "target_map":    sdata_instance.target_map,
-            "train_dataset_size":  sdata_instance.train_dataset_size,
-            "validate_dataset_size":  sdata_instance.validate_dataset_size,
-        }
-        return dataset_att
 
     @staticmethod
     def download_dataset(url: str, save_fname: str):
