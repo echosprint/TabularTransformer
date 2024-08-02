@@ -18,11 +18,35 @@ class ReaderMeta(ABCMeta):
         if original_read_data_file:
             def new_read_data_file(self, *args, **kwargs):
                 self.pre_read_data()
+                if not args and not kwargs:
+                    args = (getattr(self, 'file_path'),)
                 result = original_read_data_file(self, *args, **kwargs)
                 self.post_read_data(result)
                 return result
             dct['read_data_file'] = new_read_data_file
         return super().__new__(cls, name, bases, dct)
+
+    def __call__(cls, *args, **kwargs):
+        # Create a new instance of the class
+        instance = super().__call__()
+        assert not (len(args) == 0 and len(kwargs) == 0), f"""{
+            cls} need at least one argument for `file_path`."""
+        # Iterate over positional arguments and assign them to attributes
+        for i, arg in enumerate(args):
+            setattr(instance, f'arg{i}', arg)
+
+        # Iterate over keyword arguments and assign them to attributes
+        for key, value in kwargs.items():
+            setattr(instance, key, value)
+
+        if not hasattr(instance, 'file_path'):
+            if len(args) > 0:
+                setattr(instance, 'file_path', args[0])
+            else:
+                raise ValueError(f"""bad arguments for {
+                                 cls}, accept one positional argument or `file_path` keyword argument""")
+
+        return instance
 
 
 class DataReader(metaclass=ReaderMeta):
