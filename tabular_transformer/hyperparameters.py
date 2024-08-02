@@ -29,9 +29,9 @@ class HyperParameters(DataclassTool):
     data_file: str = "income/income_evaluation_train"
     batch_size: int = 128  # if gradient_accumulation_steps > 1, this is the micro-batch size
     # the dataset feature vocab size must <= transformer feature vocab size
-    feature_vocab_size: int = 2048
+    # feature_vocab_size: int = 2048
     num_cols: int = 14
-    max_seq_len: int = 14
+    # max_seq_len: int = 14
     min_cat_count: float = 0.02
     apply_power_transform: bool = True
     remove_outlier: bool = False
@@ -55,7 +55,7 @@ class HyperParameters(DataclassTool):
     output_forward_dim: int = 8
     multiple_of: int = 32
     dropout: float = 0.0
-    finetune: bool = False
+    # finetune: bool = False
 
     # adamw optimizer
     gradient_accumulation_steps: int = 1  # used to simulate larger batch sizes
