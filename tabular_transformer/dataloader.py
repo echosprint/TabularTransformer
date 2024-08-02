@@ -15,7 +15,7 @@ def load_data(datafile: str) -> pd.DataFrame:
     return df
 
 
-class SingletonDataset(Singleton):
+class RawDataset():
 
     datafile: str
     min_cat_count: int
@@ -28,17 +28,12 @@ class SingletonDataset(Singleton):
     def __init__(self,
                  datafile: str,
                  max_seq_len: int = 1024,
-                 feature_vocab_size=2048,
                  min_cat_count: Union[int, float] = 200,
                  validate_split: float = 0.2,
                  pretext_with_label: bool = True,
                  pretext_target_col: Optional[str] = None,
                  seed: Optional[int] = None,
                  ):
-        if self._initialized:  # make sure initialized only once, to reduce load data overhead
-            return
-
-        super().__init__()
 
         self.datafile = datafile
         filename = f"{self.datafile}.csv"
@@ -77,7 +72,6 @@ class SingletonDataset(Singleton):
 
         self.feature_vocab = generate_feature_vocab(self.stats_x[0])
         self.feature_vocab_size = len(self.feature_vocab)
-        assert self.feature_vocab_size <= feature_vocab_size, "feature vocab size too large for the transformer embedding"
 
         self.tokenizer = Tokenizer(self.feature_vocab, self.stats_x[1])
 
