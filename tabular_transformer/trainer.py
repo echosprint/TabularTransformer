@@ -1,28 +1,143 @@
-from typing import Literal, Optional
-from .hyperparameters import HyperParameters
+from typing import Any, Dict, Literal, Optional
+
+from .tabular_transformer import TabularTransformer
+from .tokenizer import Tokenizer
+from .dataloader import RawDataset
+from .hyperparameters import HyperParameters, TrainParameters
 from .data_common import DataReader
 import torch
 import inspect
 
 
 class Trainer:
-    def __init__(self, data_reader: DataReader, hp: HyperParameters):
-        assert isinstance(data_reader, DataReader)
+
+    # hyper parameters
+    hp: HyperParameters
+
+    # checkpoint
+    train_output_checkpoint: str
+    finetune_output_checkpoint: str
+
+    # data reader
+    train_data_reader: DataReader
+    finetune_data_reader: DataReader
+
+    # dataset
+    train_dataset: RawDataset
+    finetune_dataset: RawDataset
+
+    # tokenizer
+    tokenizer: Tokenizer
+
+    # model
+    train_model: TabularTransformer
+    finetune_model: TabularTransformer
+
+    # train and finetune parameters
+    train_paras: TrainParameters
+    finetune_paras: TrainParameters
+
+    def __init__(self, hp: HyperParameters):
         assert isinstance(hp, HyperParameters)
-        self.data_reader = data_reader
         self.hp = hp
-        self.model = None
 
-    def train(resume: bool = False,
-              finetue: bool = False,
-              input_checkpoint: Optional[str] = None,
-              output_checkpoint: str = 'ckpt.pt'):
+    def train(self,
+              train_data_reader: DataReader,
+              train_epochs: int,
+              batch_size: int,
+              learning_rate: float,
+              output_dim: int,
+              loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'],
+              eval_interval: int = 1000,
+              validate_split: float = 0.2,
+              output_checkpoint: str = 'ckpt.pt',
+              pretext_target_col: Optional[str] = None,
+              pretext_with_label: bool = True):
+
+        assert isinstance(train_data_reader, DataReader)
+        self.train_data_reader = train_data_reader
+        self.train_output_checkpoint = output_checkpoint
+        self.train_paras = TrainParameters(train_epochs=train_epochs, batch_size=batch_size,
+                                           learning_rate=learning_rate, output_dim=output_dim,
+                                           loss_type=loss_type, eval_interval=eval_interval,
+                                           validate_split=validate_split,
+                                           # pretext_target_col=pretext_target_col,
+                                           pretext_with_label=pretext_with_label)
+        if pretext_target_col is not None:
+            self.train_paras.update('pretext_target_col', pretext_target_col)
+
+        self._create_train_dataset()
+
+        self._create_tokenizer()
+
+        self._create_train_model()
+
+        self._train()
+
+        # after train, del train_model to reduce video memory usage
+        del self.train_model
+
+    def finetune(self,
+                 finetune_data_reader: DataReader,
+                 finetune_epochs: int,
+                 batch_size: int,
+                 learning_rate: float,
+                 output_dim: int,
+                 loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'],
+                 eval_interval: int = 1000,
+                 validate_split: float = 0.2,
+                 output_checkpoint: str = 'ckpt.pt'):
+
+        assert isinstance(finetune_data_reader, DataReader)
+        self.finetune_data_reader = finetune_data_reader
+        self.finetune_output_checkpoint = output_checkpoint
+
+        self.finetune_paras = TrainParameters(train_epochs=finetune_epochs, batch_size=batch_size,
+                                              learning_rate=learning_rate, output_dim=output_dim,
+                                              loss_type=loss_type, eval_interval=eval_interval,
+                                              validate_split=validate_split)
+
+        self._create_finetune_dataset()
+
+        self._create_finetune_model()
+
+        # train
+        self._train()
+
+        # after finetune, del train_model to reduce video memory usage
+        del self.finetune_model
+
+    def _train(self):
+        config = self.hp.asdict()
+        config.update({})
+
+    def _create_train_model(self):
         ...
 
-    def _make_model():
+    def _create_finetune_model(self):
         ...
 
-    def estimate_mfu(self, fwdbwd_per_iter, dt):
+    def _create_train_dataset(self):
+        self.train_dataset = RawDataset(datareader=self.train_data_reader,
+                                        min_cat_count=self.hp.min_cat_count,
+                                        validate_split=self.train_paras.validate_split,
+                                        pretext_with_label=self.train_paras.pretext_with_label,
+                                        pretext_target_col=self.train_paras.pretext_target_col,
+                                        seed=self.hp.dataset_seed)
+
+    def _create_finetune_dataset(self):
+        self.finetune_dataset = RawDataset(datareader=self.finetune_data_reader,
+                                           min_cat_count=self.hp.min_cat_count,
+                                           validate_split=self.finetune_paras.validate_split,
+                                           seed=self.hp.dataset_seed)
+
+    def _create_tokenizer(self):
+        self.tokenizer = Tokenizer()
+
+    def _init_dataloader(self):
+        ...
+
+    def _estimate_mfu(self, fwdbwd_per_iter, dt):
         """ estimate model flops utilization (MFU) in units of A100 bfloat16 peak FLOPS """
         # first estimate the number of flops we do per iteration.
         # see PaLM paper Appendix B as ref: https://arxiv.org/abs/2204.02311
@@ -38,7 +153,7 @@ class Trainer:
         mfu = flops_achieved / flops_promised
         return mfu
 
-    def configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
+    def _configure_optimizers(self, weight_decay, learning_rate, betas, device_type):
         # start with all of the candidate parameters
         param_dict = {pn: p for pn, p in self.named_parameters()}
         # filter out those that do not require grad
@@ -84,6 +199,7 @@ class Trainer:
         print(f"using fused AdamW: {use_fused}")
 
         return optimizer
+
     # @torch.no_grad()
     # def estimate_loss(self):
     #     out = {}
