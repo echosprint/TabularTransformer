@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Literal, Optional, Tuple
 
 import numpy as np
 import torch
@@ -16,8 +16,8 @@ class ModelArgs:
     dim: int = 1024
     n_layers: int = 16
     n_heads: int = 8
-    loss_type: int = 1
-    # sum of cardinality of categorical feature and scalar feature, plus [UNKNOWN] for each feature
+    loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
+    # sum of cardinality of categorical feature and numerical feature, plus [UNKNOWN] for each feature
     feature_vocab_size: int = 2048
     output_dim: int = 1  # final out dimension
     output_hidden_dim: int = 128
@@ -239,8 +239,8 @@ class TabularTransformer(nn.Module):
     def __init__(self, params: ModelArgs):
         super().__init__()
         self.params = params
-        assert params.loss_type in (1, 2, 3, 4)
-        self.loss_type = LossType(params.loss_type)
+        assert params.loss_type in ('BINCE', 'MULCE', 'MSE', 'SUPCON')
+        self.loss_type = LossType[params.loss_type]
         self.transformer = Transformer(params)
         self.output = ForwardOutPut(params)
         self.sup_con_loss = SupConLoss() if self.loss_type is LossType.SUPCON else None

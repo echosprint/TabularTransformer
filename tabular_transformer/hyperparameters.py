@@ -119,7 +119,7 @@ class TrainParameters(DataclassTool):
     train_epochs: int = 200
     batch_size: int = 128
     output_dim: int = 1
-    loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'] = 'BINCLASS'  # noqa: E501
+    loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
     eval_interval: int = 100,
     validate_split: float = 0.2
     # pretext_target_col: str = None
