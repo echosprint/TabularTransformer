@@ -1,9 +1,10 @@
-from typing import Any, Dict, Literal, Optional
-
+from typing import Any, Dict, Literal, Optional, Union
+from .preprocessor import CategoricalStats, NumericalStats
+from .util import FeatureType, TaskType
 from .tabular_transformer import TabularTransformer
 from .tokenizer import Tokenizer
 from .dataloader import RawDataset
-from .hyperparameters import HyperParameters, TrainParameters
+from .hyperparameters import HyperParameters, TrainParameters, TrainSettings
 from .data_common import DataReader
 import torch
 import inspect
@@ -11,65 +12,60 @@ import inspect
 
 class Trainer:
 
-    # hyper parameters
-    hp: HyperParameters
-
-    # checkpoint
-    train_output_checkpoint: str
-    finetune_output_checkpoint: str
-
-    # data reader
-    train_data_reader: DataReader
-    finetune_data_reader: DataReader
+    # parameters
+    hp: HyperParameters  # hyper parameters
+    tp: TrainParameters  # Train parameters
+    ts: TrainSettings  # Train Settings
 
     # dataset
-    train_dataset: RawDataset
-    finetune_dataset: RawDataset
-
-    # tokenizer
-    tokenizer: Tokenizer
+    data_reader: DataReader  # data reader
+    dataset: RawDataset  # dataset
 
     # model
-    train_model: TabularTransformer
-    finetune_model: TabularTransformer
+    train_model: TabularTransformer  # model
 
-    # train and finetune parameters
-    train_paras: TrainParameters
-    finetune_paras: TrainParameters
+    # checkpoint
+    output_checkpoint: str  # checkpoint
+    input_checkpoint: Optional[str]
+    init_from: Literal['scratch', 'resume']
+    replace_output_head: bool  # replace output head when resume
 
-    # finetune mode
-    finetune_mode: bool
+    # dataset feature
+    tokenizer: Tokenizer  # tokenizer
+    feature_vocab: Dict[str, int]
+    feature_type: Dict[str, FeatureType]
+    feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]]
+    target_map: Dict[str, int]
+    task_type: TaskType
 
-    def __init__(self, hp: HyperParameters):
+    def __init__(self, hp: HyperParameters, ts: TrainSettings):
         assert isinstance(hp, HyperParameters)
+        assert isinstance(ts, TrainSettings)
         self.hp = hp
+        self.ts = ts
 
     def train(self,
-              train_data_reader: DataReader,
-              train_epochs: int,
-              batch_size: int,
-              learning_rate: float,
-              output_dim: int,
-              loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'],
-              eval_interval: int = 1000,
-              validate_split: float = 0.2,
-              output_checkpoint: str = 'ckpt.pt',
-              pretext_target_col: Optional[str] = None,
-              pretext_with_label: bool = True):
+              data_reader: DataReader,
+              tp: TrainParameters,
+              init_from: Literal['scratch', 'resume'] = 'scratch',
+              replace_output_head: bool = True, ):
 
-        assert isinstance(train_data_reader, DataReader)
-        self.train_data_reader = train_data_reader
-        self.train_output_checkpoint = output_checkpoint
-        self.train_paras = TrainParameters(train_epochs=train_epochs, batch_size=batch_size,
-                                           learning_rate=learning_rate, output_dim=output_dim,
-                                           loss_type=loss_type, eval_interval=eval_interval,
-                                           validate_split=validate_split,
-                                           # pretext_target_col=pretext_target_col,
-                                           pretext_with_label=pretext_with_label)
-        if pretext_target_col is not None:
-            self.train_paras.update('pretext_target_col', pretext_target_col)
+        assert isinstance(data_reader, DataReader)
+        assert isinstance(tp, TrainParameters)
+        assert init_from in ('scratch', 'resume')
+        assert isinstance(replace_output_head, bool)
 
-        self.finetune_mode = False
+        self.data_reader = data_reader
+        self.tp = tp
+
+        self.output_checkpoint = tp.output_checkpoint if tp.output_checkpoint is not None else tp.checkpoint
+        assert self.output_checkpoint is not None
+        self.input_checkpoint = tp.input_checkpoint if tp.input_checkpoint is not None else tp.checkpoint
+        assert self.input_checkpoint is not None
+
+        assert not replace_output_head and init_from == 'resume', "when `replace_output_head` is True, init_from must be `resume`"
+        self.init_from = init_from
+        self.replace_output_head = replace_output_head
 
         self._create_train_dataset()
 
@@ -82,38 +78,6 @@ class Trainer:
         # after train, del train_model to reduce video memory usage
         del self.train_model
 
-    def finetune(self,
-                 finetune_data_reader: DataReader,
-                 finetune_epochs: int,
-                 batch_size: int,
-                 learning_rate: float,
-                 output_dim: int,
-                 loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'],
-                 eval_interval: int = 1000,
-                 validate_split: float = 0.2,
-                 output_checkpoint: str = 'ckpt.pt'):
-
-        assert isinstance(finetune_data_reader, DataReader)
-        self.finetune_data_reader = finetune_data_reader
-        self.finetune_output_checkpoint = output_checkpoint
-
-        self.finetune_paras = TrainParameters(train_epochs=finetune_epochs, batch_size=batch_size,
-                                              learning_rate=learning_rate, output_dim=output_dim,
-                                              loss_type=loss_type, eval_interval=eval_interval,
-                                              validate_split=validate_split)
-
-        self.finetune_mode = True
-
-        self._create_finetune_dataset()
-
-        self._create_finetune_model()
-
-        # train
-        self._train()
-
-        # after finetune, del train_model to reduce video memory usage
-        del self.finetune_model
-
     def _train(self):
         config = self.hp.asdict()
         config.update({})
@@ -121,24 +85,16 @@ class Trainer:
     def _create_train_model(self):
         ...
 
-    def _create_finetune_model(self):
-        ...
-
     def _create_train_dataset(self):
-        self.train_dataset = RawDataset(datareader=self.train_data_reader,
-                                        min_cat_count=self.hp.min_cat_count,
-                                        validate_split=self.train_paras.validate_split,
-                                        pretext_with_label=self.train_paras.pretext_with_label,
-                                        pretext_target_col=self.train_paras.pretext_target_col,
-                                        seed=self.hp.dataset_seed)
-
-    def _create_finetune_dataset(self):
-        self.finetune_dataset = RawDataset(datareader=self.finetune_data_reader,
-                                           min_cat_count=self.hp.min_cat_count,
-                                           validate_split=self.finetune_paras.validate_split,
-                                           seed=self.hp.dataset_seed)
+        self.dataset = RawDataset(datareader=self.train_data_reader,
+                                  min_cat_count=self.hp.min_cat_count,
+                                  validate_split=self.train_paras.validate_split,
+                                  pretext_with_label=self.train_paras.pretext_with_label,
+                                  pretext_target_col=self.train_paras.pretext_target_col,
+                                  seed=self.hp.dataset_seed)
 
     def _create_tokenizer(self):
+        # when resume, use tokenizer from the checkpoint
         self.tokenizer = Tokenizer()
 
     def _init_dataloader(self):
