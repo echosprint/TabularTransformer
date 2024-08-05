@@ -129,3 +129,8 @@ class Tokenizer():
                 raise ValueError("column type can be CATEGORICAL or SCALAR")
 
         return torch.stack(feature_tokens_list, dim=1), torch.stack(feature_weight_list, dim=1)
+
+    def __eq__(self, other):
+        if isinstance(other, Tokenizer):
+            return self.feature_vocab == other.feature_vocab and self.feature_type == other.feature_type
+        return False
