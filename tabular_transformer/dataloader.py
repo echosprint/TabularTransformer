@@ -2,9 +2,9 @@ import pandas as pd
 import torch
 import random
 from typing import Tuple, Callable, Union, Optional, Dict
-from .preprocessor import data_stats, generate_feature_vocab, preprocess, CategoricalStats, ScalarStats
+from .preprocessor import data_stats, generate_feature_vocab, preprocess, CategoricalStats, NumericalStats
 from .tokenizer import Tokenizer
-from .util import TaskType, CATEGORICAL_UNK
+from .util import FeatureType, TaskType, CATEGORICAL_UNK
 from .data_common import DataReader, download
 import numpy as np
 
@@ -22,14 +22,11 @@ class RawDataset():
     num_cols: int
     task_type: TaskType
     target_map: Optional[Dict[str, int]]
-    pretext_target_col: Optional[str]
 
     def __init__(self,
                  datareader: DataReader,
                  min_cat_count: Union[int, float] = 200,
                  validate_split: float = 0.2,
-                 pretext_with_label: bool = True,
-                 pretext_target_col: Optional[str] = None,
                  seed: Optional[int] = None,
                  ):
 
@@ -39,21 +36,7 @@ class RawDataset():
         print(f"load dataset from file: {self.datareader.file_path}")
         self.dataset = self.datareader.read_data_file()
 
-        self.pretext_target_col = pretext_target_col
-
-        if pretext_target_col is not None:
-            assert pretext_target_col in self.dataset.columns
-            assert (
-                not pretext_with_label) or self.dataset.columns[-1] != pretext_target_col
-
-            if pretext_with_label:
-                self.dataset = self.dataset.iloc[:, :-1]
-
-            assert f"pretext_target_{pretext_target_col.strip()}" not in self.dataset.columns  # noqa: E501
-            self.dataset[f"pretext_target_{pretext_target_col.strip()}"] = self.dataset[pretext_target_col].copy()  # noqa: E501
-
-        self.dataset_x, self.dataset_y = self.dataset.iloc[:,
-                                                           :-1], self.dataset.iloc[:, [-1]]
+        self.dataset_x, self.dataset_y = self.dataset.iloc[:, :-1], self.dataset.iloc[:, [-1]]  # noqa: E501
         self.data_size = len(self.dataset_x)
 
         assert min_cat_count > 0
@@ -127,67 +110,68 @@ class RawDataset():
         return dataset_att
 
 
-class PretokDataset(torch.utils.data.IterableDataset):
-    """Loads pretokenized examples from disk and yields them as PyTorch tensors."""
+class TabularDataset(torch.utils.data.IterableDataset):
+    """Loads tabular samples from disk and yields them as PyTorch tensors."""
 
     batch_size: int
     split: str
+    raw_dataset: RawDataset
     apply_power_transform: bool
     remove_outlier: bool
-    unk_ratio: Optional[float]
+    unk_ratio: Optional[Dict[str, float]]
+    unk_ratio_default: Optional[float]
+    feature_type: Dict[str, FeatureType]
+    feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]]
+    tokenizer: Tokenizer
+    target_map: Dict[str, int]
+    task_type: TaskType
     seed: Optional[int]
 
     def __init__(self,
                  batch_size: int,
                  split: str,
-                 datafile: str,
-                 min_cat_count: Union[int, float] = 200,
+                 raw_dataset: RawDataset,
+                 feature_type: Dict[str, FeatureType],
+                 feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]],
+                 tokenizer: Tokenizer,
+                 target_map: Dict[str, int],
+                 task_type: TaskType,
                  apply_power_transform=True,
                  remove_outlier=False,
-                 unk_ratio: Optional[float] = None,
-                 max_seq_len: int = 1024,
-                 feature_vocab_size=2048,
-                 validate_split: float = 0.2,
+                 unk_ratio: Optional[Dict[str, float]] = None,
+                 unk_ratio_default: Optional[float] = None,
                  seed: Optional[int] = None,
-                 pretext_with_label: bool = True,
-                 pretext_target_col: Optional[str] = None,
-                 pretext_col_unk_ratio: Optional[float] = None,
                  ):
         super().__init__()
         self.apply_power_transform = apply_power_transform
         self.remove_outlier = remove_outlier
         self.unk_ratio = unk_ratio
+        self.unk_ratio_default = unk_ratio_default
         self.seed = seed
 
         self.batch_size = batch_size  # number of rows per time
 
-        self.pretext_col_unk_ratio = pretext_col_unk_ratio
-
-        self.sdata = SingletonDataset(datafile,
-                                      max_seq_len,
-                                      feature_vocab_size,
-                                      min_cat_count,
-                                      validate_split,
-                                      pretext_with_label,
-                                      pretext_target_col,
-                                      seed,
-                                      )
+        self.raw_dataset = raw_dataset
+        self.feature_type = feature_type
+        self.feature_stats = feature_stats
+        self.tokenizer = tokenizer
+        self.target_map = target_map
+        self.task_type = task_type
 
         self.split = split
         assert self.split in ("train", "val")
-        # assert self.split == "train" or self.unk_ratio is None or self.unk_ratio <= 0
 
-        self.dataset_x = self.sdata.train_dataset_x if self.split == "train" else self.sdata.validate_dataset_x
-        self.dataset_y = self.sdata.train_dataset_y if self.split == "train" else self.sdata.validate_dataset_y
+        self.dataset_x = self.raw_dataset.train_dataset_x if self.split == "train" else self.raw_dataset.validate_dataset_x
+        self.dataset_y = self.raw_dataset.train_dataset_y if self.split == "train" else self.raw_dataset.validate_dataset_y
 
         self.rng = random.Random(self.seed)
-        # print(f"Created a PretokDataset with rng seed {self.seed}")
 
     def __iter__(self):
 
         dataset_size = len(self.dataset_x)
         num_batches = dataset_size // self.batch_size
-        assert num_batches > 0, "this dataset is too small? investigate."
+        # assert num_batches > 0, "this dataset is too small? investigate."
+        assert dataset_size == 0 or self.batch_size <= dataset_size, "the batch size is too large for the dataset"
 
         ixs = list(range(dataset_size))
         self.rng.shuffle(ixs)
@@ -202,20 +186,19 @@ class PretokDataset(torch.utils.data.IterableDataset):
             # preprocess the data
             xp = preprocess(self.rng,
                             x,
-                            self.sdata.stats_x[1],
-                            self.sdata.stats_x[0],
+                            self.feature_type,
+                            self.feature_stats,
                             self.apply_power_transform,
                             self.remove_outlier,
                             self.unk_ratio,
-                            self.sdata.pretext_target_col,
-                            self.pretext_col_unk_ratio,
+                            self.unk_ratio_default,
                             )
 
-            x_tok = self.sdata.tokenizer.encode(xp)
-            y_tok = y if self.sdata.target_map is None else y.map(
-                lambda x: self.sdata.target_map[x])
+            x_tok = self.tokenizer.encode(xp)
+            y_tok = y if self.target_map is None else y.map(
+                lambda x: self.target_map[x])
 
-            target_dtype = torch.float32 if self.sdata.task_type == TaskType.REGRESSION else torch.long
+            target_dtype = torch.float32 if self.task_type == TaskType.REGRESSION else torch.long
 
             yield x_tok, torch.tensor(y_tok.to_numpy(), dtype=target_dtype).squeeze()
 
@@ -224,7 +207,7 @@ class Task:
 
     @staticmethod
     def iter_batches(batch_size, device, num_workers=0, **dataset_kwargs):
-        ds = PretokDataset(batch_size, **dataset_kwargs)
+        ds = TabularDataset(batch_size, **dataset_kwargs)
 
         dl = torch.utils.data.DataLoader(
             ds, batch_size=None, pin_memory=True, num_workers=num_workers)

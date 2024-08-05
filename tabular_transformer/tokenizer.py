@@ -118,7 +118,7 @@ class Tokenizer():
                 t2 = torch.ones_like(t1, dtype=torch.float32)
                 feature_tokens_list.append(t1)
                 feature_weight_list.append(t2)
-            elif col_type is FeatureType.SCALAR:
+            elif col_type is FeatureType.NUMERICAL:
                 t = tab[col].map(lambda x: map_scalar(col, x))
                 v = tab[col].map(lambda x: 1.0 if np.isnan(x) else x)
                 t1 = torch.tensor(t.to_numpy(), dtype=torch.long)

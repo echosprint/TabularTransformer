@@ -15,7 +15,7 @@ class CategoricalStats:
 
 
 @dataclass
-class ScalarStats:
+class NumericalStats:
     # scalar variable statistics for all the data points
     min_value: np.number
     max_value: np.number
@@ -77,7 +77,7 @@ def data_stats(df: pd.DataFrame, min_cat_count: int = 1000):
     for col in df.columns:
         if is_numeric_dtype(df[col]):
             power_col = df[col].map(lambda x: power_transform(x))
-            feature_stats[col] = ScalarStats(
+            feature_stats[col] = NumericalStats(
                 min_value=df[col].min(),
                 max_value=df[col].max(),
                 mean=df[col].mean(),
@@ -85,7 +85,7 @@ def data_stats(df: pd.DataFrame, min_cat_count: int = 1000):
                 logmean=power_col.mean(),
                 logstd=power_col.std(),
             )
-            feature_type[col] = FeatureType.SCALAR
+            feature_type[col] = FeatureType.NUMERICAL
         else:
             value_counts = df[col].value_counts()
             filtered_counts = value_counts[value_counts >=
@@ -107,7 +107,7 @@ def generate_feature_vocab(feature_stats) -> Dict[str, int]:
                 assert cat != CATEGORICAL_UNK
                 feature_vocab[f"{feat.strip()}_{str(cat).strip()}"] = i
                 i += 1
-        elif isinstance(stats, ScalarStats):
+        elif isinstance(stats, NumericalStats):
             feature_vocab[f"{feat.strip()}_{SCALAR_UNK}"] = i
             i += 1
             feature_vocab[f"{feat.strip()}_{SCALAR_NUMERIC}"] = i
@@ -119,40 +119,32 @@ def generate_feature_vocab(feature_stats) -> Dict[str, int]:
 
 def random_mark_unk(rng: Random, data: pd.DataFrame,
                     feature_type: Dict[str, FeatureType],
-                    unk_ratio: Optional[float] = None,
-                    pretext_target_col: Optional[str] = None,
-                    pretext_col_unk_ratio: Optional[float] = None,
+                    unk_ratio: Optional[Dict[str, float]] = None,
+                    unk_ratio_default: Optional[float] = None,
                     ):
-    if unk_ratio is None or unk_ratio <= 0:
-        assert pretext_target_col is None
+    if (unk_ratio is None or len(unk_ratio) == 0) and (unk_ratio_default is None or unk_ratio_default <= 0):
         return
+    assert unk_ratio_default is not None and 1 > unk_ratio_default > 0
+    unk_ratio = {} if unk_ratio is None else unk_ratio
 
     data_size = len(data)
 
-    num_replacements = int(data_size * unk_ratio)
-
-    if num_replacements <= 0:
-        if data_size < 4:
-            raise ValueError("batch size too small for random mark unk")
-        else:
-            num_replacements = 1
-
-    assert 0 < num_replacements < data_size
-
     for col in data.columns:
-        if pretext_target_col is not None and col == pretext_target_col:
-            assert pretext_col_unk_ratio is not None and 1 > pretext_col_unk_ratio > 0.5
-            pretext_num_replacements = int(data_size * pretext_col_unk_ratio)
-            assert pretext_num_replacements > num_replacements
-            random_indices = rng.sample(
-                data.index.to_list(), k=pretext_num_replacements)
-        else:
-            random_indices = rng.sample(
-                data.index.to_list(), k=num_replacements)
+        unk_ratio_col = unk_ratio.get(col, unk_ratio_default)
+        num_replacements = int(data_size * unk_ratio_col)
+
+        if num_replacements <= 0:
+            if data_size < 4:
+                raise ValueError("batch size too small for random mark unk")
+            else:
+                num_replacements = 1
+        assert 0 < num_replacements < data_size
+        random_indices = rng.sample(
+            data.index.to_list(), k=num_replacements)
 
         if feature_type[col] is FeatureType.CATEGORICAL:
             data.loc[random_indices, col] = CATEGORICAL_UNK
-        elif feature_type[col] is FeatureType.SCALAR:
+        elif feature_type[col] is FeatureType.NUMERICAL:
             data.loc[random_indices, col] = np.nan
         else:
             raise ValueError("bad featuretype")
@@ -160,13 +152,13 @@ def random_mark_unk(rng: Random, data: pd.DataFrame,
 
 def normalize_and_transform(data: pd.DataFrame,
                             feature_type: Dict[str, FeatureType],
-                            feature_stats,
+                            feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]],
                             apply_power_transform=True,
                             remove_outlier=False):
     for col in data.columns:
         col_type = feature_type[col]
-        if col_type is FeatureType.SCALAR:
-            col_stats: ScalarStats = feature_stats[col]
+        if col_type is FeatureType.NUMERICAL:
+            col_stats: NumericalStats = feature_stats[col]
 
             if remove_outlier:
                 data[col] = data[col].map(lambda x: remove_outliers(
@@ -184,12 +176,11 @@ def normalize_and_transform(data: pd.DataFrame,
 def preprocess(rng: Random,
                data: pd.DataFrame,
                feature_type: Dict[str, FeatureType],
-               feature_stats: Dict[str, Union[CategoricalStats, ScalarStats]],
+               feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]],
                apply_power_transform=True,
                remove_outlier=False,
-               unk_ratio: Optional[float] = None,
-               pretext_target_col: Optional[str] = None,
-               pretext_col_unk_ratio: Optional[float] = None,
+               unk_ratio: Optional[Dict[str, float]] = None,
+               unk_ratio_default: Optional[float] = None,
                ) -> pd.DataFrame:
     data = data.copy()
     data.reset_index(drop=True, inplace=True)
@@ -197,7 +188,6 @@ def preprocess(rng: Random,
     normalize_and_transform(data, feature_type, feature_stats,
                             apply_power_transform, remove_outlier)
 
-    random_mark_unk(rng, data, feature_type, unk_ratio,
-                    pretext_target_col, pretext_col_unk_ratio)
+    random_mark_unk(rng, data, feature_type, unk_ratio, unk_ratio_default)
 
     return data

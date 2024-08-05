@@ -17,7 +17,7 @@ class LossType(Enum):
 
 class FeatureType(Enum):
     CATEGORICAL = 1
-    SCALAR = 2
+    NUMERICAL = 2
 
 
 SCALAR_NUMERIC = "<|scalarnumeric|>"
