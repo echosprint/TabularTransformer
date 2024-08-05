@@ -45,14 +45,15 @@ class RawDataset():
 
         self.stats_x = data_stats(
             self.dataset_x, min_cat_count=self.min_cat_count)
+
+        self.feature_stats, self.feature_type = self.stats_x
+
         self.stats_y = data_stats(self.dataset_y, min_cat_count=1)
 
         self.num_cols = len(self.stats_x[1])
 
         self.feature_vocab = generate_feature_vocab(self.stats_x[0])
         self.feature_vocab_size = len(self.feature_vocab)
-
-        self.feature_type = self.stats_x[1]
 
         self.train_dataset, self.validate_dataset = self._split_dataset(
             validate_split=validate_split)
