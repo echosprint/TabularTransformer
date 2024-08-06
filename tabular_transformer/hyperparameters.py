@@ -130,7 +130,7 @@ class TrainParameters(DataclassTool):
     learning_rate: float = 5e-4
     transformer_lr: float = None
     output_head_lr: float = None
-    decay_lr: bool = True  # whether to decay the learning rate
+    # decay_lr: bool = True  # whether to decay the learning rate
     warmup_iters: int = 1000  # how many steps to warm up for
     lr_scheduler: Literal['constant', 'cosine'] = 'cosine'
 
