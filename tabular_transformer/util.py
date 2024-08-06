@@ -59,3 +59,22 @@ def drop_column(datafile, drop_col, move_col=None):
         move_column = df.pop(move_col)
         df[move_col] = move_column
     df.to_csv(f"./data/{datafile}_contrast.csv", index=False)
+
+
+def equals_except(dict1, dict2, ignore_key):
+    assert isinstance(dict1, dict) and isinstance(
+        dict2, dict), "Both inputs must be dictionaries."
+
+    assert isinstance(ignore_key, (str, tuple, list)
+                      ), "Ignore key must be a string, tuple, or list."
+
+    if isinstance(ignore_key, str):
+        # Convert to a list for consistent processing
+        ignore_key = [ignore_key]
+
+    # Create new dictionaries excluding the keys to ignore
+    filtered_dict1 = {k: v for k, v in dict1.items() if k not in ignore_key}
+    filtered_dict2 = {k: v for k, v in dict2.items() if k not in ignore_key}
+
+    # Compare the filtered dictionaries
+    return filtered_dict1 == filtered_dict2
