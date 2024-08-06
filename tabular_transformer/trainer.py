@@ -75,28 +75,40 @@ class Trainer:
               data_reader: DataReader,
               tp: TrainParameters,
               init_from: Literal['scratch', 'resume'] = 'scratch',
-              replace_output_head: bool = True, ):
+              replace_output_head: Optional[bool] = None, ):
 
         assert isinstance(data_reader, DataReader)
         assert isinstance(tp, TrainParameters)
         assert init_from in ('scratch', 'resume')
-        assert isinstance(replace_output_head, bool)
+        assert replace_output_head is None or isinstance(
+            replace_output_head, bool)
 
         self.data_reader = data_reader
         self.tp = tp
 
-        self.output_checkpoint = tp.output_checkpoint if tp.output_checkpoint is not None else tp.checkpoint
+        self.output_checkpoint = tp.output_checkpoint \
+            if tp.output_checkpoint is not None else tp.checkpoint
         assert self.output_checkpoint is not None
-        self.input_checkpoint = tp.input_checkpoint if tp.input_checkpoint is not None else tp.checkpoint
+
+        self.input_checkpoint = tp.input_checkpoint \
+            if tp.input_checkpoint is not None else tp.checkpoint
         assert self.input_checkpoint is not None
 
-        assert not replace_output_head and init_from == 'resume', "when `replace_output_head` is True, init_from must be `resume`"
+        assert replace_output_head is None or \
+            not replace_output_head or \
+            init_from == 'resume', \
+            "when `replace_output_head` is True, init_from must be `resume`"
+
         self.init_from = init_from
         self.resume = init_from == 'resume'
         self.replace_output_head = replace_output_head
 
-        self.transformer_lr = self.tp.transformer_lr if self.tp.transformer_lr is not None else self.tp.learning_rate
-        self.output_head_lr = self.tp.output_head_lr if self.tp.output_head_lr is not None else self.tp.learning_rate
+        self.transformer_lr = self.tp.transformer_lr \
+            if self.tp.transformer_lr is not None else self.tp.learning_rate
+
+        self.output_head_lr = self.tp.output_head_lr \
+            if self.tp.output_head_lr is not None else self.tp.learning_rate
+
         assert self.transformer_lr is not None and self.output_head_lr is not None
 
         self.lr_scheduler = self.tp.lr_scheduler
@@ -208,7 +220,7 @@ class Trainer:
 
                 # evaluate the loss on train/val sets and write checkpoints
                 if iter_num % self.tp.eval_interval == 0:
-                    losses = self.estimate_loss()
+                    losses = self._estimate_loss()
                     print(f"step {iter_num}: train loss {
                         losses['train']:.4f}, val loss {losses['val']:.4f}")
                     if self.ts.wandb_log:
@@ -281,7 +293,7 @@ class Trainer:
                     # get loss as float, scale up due to the divide above. note: this is a CPU-GPU sync point
                     lossf = loss.item() * self.hp.gradient_accumulation_steps
                     if local_iter_num >= 5:  # let the training loop settle a bit
-                        mfu = self.estimate_mfu(
+                        mfu = self._estimate_mfu(
                             self.tp.batch_size * self.hp.gradient_accumulation_steps, dt)
                         running_mfu = mfu if running_mfu == -1.0 else 0.9 * running_mfu + 0.1 * mfu
                     print(
@@ -474,7 +486,7 @@ class Trainer:
         return optimizer
 
     @torch.no_grad()
-    def estimate_loss(self):
+    def _estimate_loss(self):
         out = {}
         eval_iters = self.ts.eval_iters
         self.model.eval()

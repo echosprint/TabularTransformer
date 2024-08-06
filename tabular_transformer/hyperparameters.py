@@ -1,4 +1,4 @@
-from dataclasses import dataclass, fields, asdict
+from dataclasses import dataclass, field, fields, asdict
 from typing import Dict, Literal, Optional, get_type_hints
 from datetime import datetime
 from .data_common import DataclassTool
@@ -120,11 +120,11 @@ class TrainParameters(DataclassTool):
     batch_size: int = 128
     output_dim: int = 1
     loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
-    eval_interval: int = 100,
+    eval_interval: int = 100
     validate_split: float = 0.2
     # pretext_target_col: str = None
     # pretext_with_label: bool = True
-    unk_ratio: Dict[str, float] = {}
+    unk_ratio: Dict[str, float] = field(default_factory=dict)
 
     # learning rate and decay settings
     learning_rate: float = 5e-4

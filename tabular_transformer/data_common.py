@@ -146,6 +146,10 @@ class TypeCheckMeta(type):
                 assert val in expect_type.__args__ and isinstance(
                     val, type(expect_type.__args__[0])
                 ), f"{val} not in {expect_type.__args__}."
+            elif hasattr(expect_type, "__origin__") and expect_type.__origin__ is dict:
+                assert all(isinstance(key, expect_type.__args__[0]) and isinstance(
+                    value, expect_type.__args__[1]) for key, value in val.items()
+                ), f"{val} must be type {expect_type}"
             else:
                 assert isinstance(
                     val, expect_type
