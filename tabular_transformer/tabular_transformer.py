@@ -8,26 +8,7 @@ import torch.nn.functional as F
 from torch import nn
 from .util import LossType
 from .losses import SupConLoss
-
-
-@dataclass
-class ModelArgs:
-    # default hyperparameters for the Llama 7B model
-    dim: int = 1024
-    n_layers: int = 16
-    n_heads: int = 8
-    loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
-    # sum of cardinality of categorical feature and numerical feature, plus [UNKNOWN] for each feature
-    feature_vocab_size: int = 2048
-    output_dim: int = 1  # final out dimension
-    output_hidden_dim: int = 128
-    output_forward_dim: int = 8
-    hidden_dim: Optional[int] = None
-    multiple_of: int = 256  # MLP hidden layer size will be multiple of
-    norm_eps: float = 1e-5
-    max_seq_len: int = 1024  # max columns of tabular data
-    dropout: float = 0.0
-    # finetune: bool = False  # enable finetune to adjust the learn rate
+from .hyperparameters import ModelArgs
 
 
 class RMSNorm(torch.nn.Module):
