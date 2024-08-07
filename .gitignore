@@ -4,6 +4,7 @@ dataset/
 wandb/
 __pycache__/
 tabular_transformer/__pycache__/
+.ipynb_checkpoints/
 log/
 
 # dot files and such
