@@ -33,6 +33,9 @@ class Trainer:
     # model
     model: Optional[TabularTransformer]  # model
 
+    # optimizer
+    optimizer: torch.optim.AdamW
+
     # checkpoint
     output_checkpoint: str  # checkpoint
     input_checkpoint: str
@@ -58,9 +61,6 @@ class Trainer:
     warmup_iters: int
     lr_decay_iters: int
     min_lr: float
-
-    # optimizer
-    optimizer: torch.optim.AdamW
 
     # random generator
     train_rng: random.Random
