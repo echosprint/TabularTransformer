@@ -61,6 +61,9 @@ class Trainer:
     lr_decay_iters: int
     min_lr: float
 
+    # loss_type
+    loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON']
+
     # random generator
     train_rng: random.Random
 
@@ -112,6 +115,8 @@ class Trainer:
         assert self.lr_scheduler in ('constant', 'cosine')
 
         self.train_rng = random.Random(self.ts.dataset_seed)
+
+        self.loss_type = self.tp.loss_type
 
         if self.resume:
             self._load_checkpoint()
@@ -376,6 +381,18 @@ class Trainer:
         self.tokenizer = Tokenizer(self.feature_vocab, self.feature_type)
         self.target_map = self.dataset.target_map if self.dataset.target_map is not None else {}
         self.task_type = self.dataset.task_type
+
+        assert self.task_type is not TaskType.BINCLASS or \
+            self.loss_type in ('BINCE', 'SUPCON'), \
+            "only binary cross entropy loss or supervised contrastive loss could be used for binary classification task"
+
+        assert self.task_type is not TaskType.MULTICLASS or \
+            self.loss_type in ('MULCE', 'SUPCON'), \
+            "only multi class cross entropy loss or supervised contrastive loss could be used for multi classification task"
+
+        assert self.task_type is not TaskType.REGRESSION or \
+            self.loss_type in ('MSE',), \
+            "only MSE loss could be used for regression task"
 
     def _load_checkpoint(self):
         ckpt_path = os.path.join(
