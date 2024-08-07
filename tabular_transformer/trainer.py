@@ -39,7 +39,6 @@ class Trainer:
     # checkpoint
     output_checkpoint: str  # checkpoint
     input_checkpoint: str
-    init_from: Literal['scratch', 'resume']
     resume: bool
     replace_output_head: bool  # replace output head when resume
     checkpoint: Optional[Dict[str, Any]]
@@ -74,12 +73,12 @@ class Trainer:
     def train(self,
               data_reader: DataReader,
               tp: TrainParameters,
-              init_from: Literal['scratch', 'resume'] = 'scratch',
+              resume: bool = False,
               replace_output_head: Optional[bool] = None, ):
 
         assert isinstance(data_reader, DataReader)
         assert isinstance(tp, TrainParameters)
-        assert init_from in ('scratch', 'resume')
+        assert isinstance(resume, bool)
         assert replace_output_head is None or isinstance(
             replace_output_head, bool)
 
@@ -95,12 +94,10 @@ class Trainer:
         assert self.input_checkpoint is not None
 
         assert replace_output_head is None or \
-            not replace_output_head or \
-            init_from == 'resume', \
-            "when `replace_output_head` is True, init_from must be `resume`"
+            not replace_output_head or resume, \
+            "when `replace_output_head` is True, `resume` must be True"
 
-        self.init_from = init_from
-        self.resume = init_from == 'resume'
+        self.resume = resume
         self.replace_output_head = replace_output_head
 
         self.transformer_lr = self.tp.transformer_lr \
