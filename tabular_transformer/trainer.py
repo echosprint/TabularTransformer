@@ -471,10 +471,10 @@ class Trainer:
 
         print("Transformer num decayed parameter tensors: "
               f"{len(transformer_decay_params)}, with {transformer_num_decay_params:,} parameters")
-        print("Output num decayed parameter tensors: "
-              f"{len(output_decay_params)}, with {output_num_decay_params:,} parameters")
         print("Transformer num non-decayed parameter tensors: "
               f"{len(transformer_nodecay_params)}, with {transformer_num_nodecay_params:,} parameters")
+        print("Output num decayed parameter tensors: "
+              f"{len(output_decay_params)}, with {output_num_decay_params:,} parameters")
         print("Output num non-decayed parameter tensors: "
               f"{len(output_nodecay_params)}, with {output_num_nodecay_params:,} parameters")
 
