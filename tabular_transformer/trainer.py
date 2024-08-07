@@ -136,8 +136,7 @@ class Trainer:
         self._train()
 
         # after train, free up resources to reduce video memory usage
-        self.model = None
-        self.optimizer = None
+        self._freeup()
 
     def _train(self):
 
@@ -396,6 +395,11 @@ class Trainer:
             device=self.ts.device,
             num_workers=0,
         )
+
+    def _freeup(self):
+        self.model = None
+        self.optimizer = None
+        torch.cuda.empty_cache()
 
     def _estimate_mfu(self, fwdbwd_per_iter, dt):
         """ estimate model flops utilization (MFU) in units of A100 bfloat16 peak FLOPS """
