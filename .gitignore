@@ -12,3 +12,5 @@ log/
 
 # log files
 *.log
+
+onlytest.ipynb
