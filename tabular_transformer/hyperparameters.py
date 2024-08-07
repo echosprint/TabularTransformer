@@ -88,7 +88,7 @@ class TrainSettings(DataclassTool):
 
     always_save_checkpoint: bool = False
 
-    reset_iter_when_resume: bool = True  # reset the iter number when resume
+    # reset_iter_when_resume: bool = True  # reset the iter number when resume
 
     # wandb logging
     wandb_log: bool = False  # disabled by default
