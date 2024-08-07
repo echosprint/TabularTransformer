@@ -193,7 +193,7 @@ class DataclassTool(metaclass=TypeCheckMeta):
             raise ValueError(f"Unknown config hyperparameter key: {hypara}")
 
     def __str__(self):
-        return f"HyperParameters: {asdict(self)}"
+        return f"{type(self).__name__}: {asdict(self)}"
 
     def asdict(self):
         return asdict(self)
