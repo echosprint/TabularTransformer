@@ -211,11 +211,12 @@ class Trainer:
                 split="train", seed=batch_seed)
             # iterate over the dataset
             for X, Y in train_batch_iter:
-
+                current_lr = {}
                 # determine and set the learning rate for this iteration
                 for name, param_group in zip(self.optim_group_names, self.optimizer.param_groups):
                     lr = self.get_lr(iter_num, name)
                     param_group["lr"] = lr
+                    current_lr.update({f"lr/{name}": lr})
 
                 # evaluate the loss on train/val sets and write checkpoints
                 if iter_num % self.tp.eval_interval == 0:
@@ -223,42 +224,13 @@ class Trainer:
                     print(f"step {iter_num}: train loss {
                         losses['train']:.4f}, val loss {losses['val']:.4f}")
                     if self.ts.wandb_log:
-                        try:
-                            wandb.log(
-                                {
-                                    "iter": iter_num,
-                                    "loss/train": losses["train"],
-                                    "loss/val": losses["val"],
-                                    "lr": lr,
-                                    "mfu": running_mfu * 100,  # convert to percentage
-                                }, step=iter_num
-                            )
-                        except Exception as e:
-                            print(f"logging to wandb failed: {e}")
+                        self._log(wandb, iter_num, losses,
+                                  current_lr, running_mfu)
                     if losses["val"] < best_val_loss or self.ts.always_save_checkpoint:
                         best_val_loss = losses["val"]
                         if iter_num > 0:
-                            save_checkpoint = {
-                                "model": self.model.state_dict(),
-                                "optimizer": self.optimizer.state_dict(),
-                                "model_args": self.model_args,
-                                "iter_num": iter_num,
-                                "best_val_loss": best_val_loss,
-                                "config": config,
-                                # "dataset_attr": Task.get_dataset_attributes(),
-                                "features": {'feature_stats': self.feature_stats,
-                                             'feature_type': self.feature_type,
-                                             'feature_vocab': self.feature_vocab,
-                                             'feature_vocab_size': self.feature_vocab_size,
-                                             'max_seq_len': self.max_seq_len,
-                                             'target_map': self.target_map,
-                                             'task_type': self.task_type,
-                                             }
-                            }
-                            print(f"saving checkpoint to {self.ts.out_dir}")
-                            torch.save(save_checkpoint, os.path.join(
-                                self.ts.out_dir, self.output_checkpoint))
-
+                            self._save_checkpoint(
+                                iter_num, best_val_loss, config)
                 if iter_num == 0 and self.ts.eval_only:
                     break
 
@@ -305,6 +277,42 @@ class Trainer:
             # two nested loops need to break twice
             if self.ts.eval_only:
                 break
+
+    def _log(self, wandb, iter_num, losses, lr, running_mfu):
+        try:
+            log_dict = {
+                "iter": iter_num,
+                "loss/train": losses["train"],
+                "loss/val": losses["val"],
+                # "lr": lr,
+                "mfu": running_mfu * 100,  # convert to percentage
+            }
+            log_dict.update(lr)
+            wandb.log(log_dict, step=iter_num)
+        except Exception as e:
+            print(f"logging to wandb failed: {e}")
+
+    def _save_checkpoint(self, iter_num, best_val_loss, config):
+        save_checkpoint = {
+            "model": self.model.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+            "model_args": self.model_args,
+            "iter_num": iter_num,
+            "best_val_loss": best_val_loss,
+            "config": config,
+            # "dataset_attr": Task.get_dataset_attributes(),
+            "features": {'feature_stats': self.feature_stats,
+                         'feature_type': self.feature_type,
+                         'feature_vocab': self.feature_vocab,
+                         'feature_vocab_size': self.feature_vocab_size,
+                         'max_seq_len': self.max_seq_len,
+                         'target_map': self.target_map,
+                         'task_type': self.task_type,
+                         }
+        }
+        print(f"saving checkpoint to {self.ts.out_dir}")
+        torch.save(save_checkpoint, os.path.join(
+            self.ts.out_dir, self.output_checkpoint))
 
     def _create_model(self):
         self.model_args = ModelArgs(
