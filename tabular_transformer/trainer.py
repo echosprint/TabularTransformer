@@ -70,6 +70,8 @@ class Trainer:
     def __init__(self, hp: HyperParameters, ts: TrainSettings):
         assert isinstance(hp, HyperParameters)
         assert isinstance(ts, TrainSettings)
+        assert 'cuda' not in ts.device or torch.cuda.is_available(), "cuda is not available"
+        assert 'cuda' in ts.device or ts.dtype != 'bfloat16', 'only cuda support bfloat16 dtype'
         self.hp = hp
         self.ts = ts
 
