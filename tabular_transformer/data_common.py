@@ -1,7 +1,8 @@
 from abc import ABC, ABCMeta, abstractmethod
+import random
 import pandas as pd
 from pathlib import Path
-from typing import Union
+from typing import Dict, Union
 import sys
 from ast import literal_eval
 import requests
@@ -9,6 +10,7 @@ from tqdm import tqdm
 import os
 from dataclasses import asdict, fields
 from typing import Literal, get_type_hints
+from pathlib import Path
 
 
 class ReaderMeta(ABCMeta):
@@ -45,6 +47,7 @@ class ReaderMeta(ABCMeta):
             else:
                 raise ValueError(f"""bad arguments for {
                                  cls}, accept one positional argument or `file_path` keyword argument""")
+        instance.file_path = Path(instance.file_path)
 
         return instance
 
@@ -99,6 +102,43 @@ class DataReader(metaclass=ReaderMeta):
             except ValueError as e:
                 raise ValueError(
                     f"Failed to cast column [{col}] to string: {e}")
+
+    def split_data(self, split: Dict[str, float | int], seed: int = 1377) -> Dict[str, Path]:
+        assert isinstance(split, dict), "`split` must be Dict[str, float|int]"
+        file_path: Path = self.file_path
+        data = self.read_data_file()
+        data_size = len(data)
+        rng = random.Random(seed)
+        ixs = list(range(data_size))
+        rng.shuffle(ixs)
+        start = 0
+        fpath = {}
+        for sp, ratio in sorted(split.items(), key=lambda kv: -kv[1]):
+            assert isinstance(ratio, (float, int))
+            assert not isinstance(ratio, int) or ratio == -1 or ratio > 0, \
+                "integer split ratio can be -1 or positive intergers, -1 means all the rest of data"
+            assert not isinstance(ratio, float) or 1 > ratio > 0, \
+                "float split ratio must be interval (0, 1)"
+            if isinstance(ratio, int):
+                part_len = data_size - start if ratio == -1 else ratio
+                assert part_len > 0, f'`no data left for `{sp}` split'
+            else:
+                part_len = int(data_size * ratio)
+                assert part_len > 0, f'`{sp}` split {ratio} two small'
+            end = start + part_len
+            assert end <= data_size, "bad split: all split sum exceed the data size"
+            data_part = data.iloc[ixs[start: end]]
+            print(f'split: {sp}, n_samples: {part_len}')
+
+            part_path = file_path.with_name(f"{file_path.stem}_{sp}.csv")
+            if part_path.exists():
+                print(f"{part_path} *already exists*, skip save split `{sp}`")
+            else:
+                print(f"save split `{sp}` at path: {part_path}")
+                data_part.to_csv(part_path, index=False)
+            fpath[f'{sp}'] = part_path
+            start = end
+        return fpath
 
 
 class SingletonMeta(type):
