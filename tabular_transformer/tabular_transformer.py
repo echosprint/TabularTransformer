@@ -173,6 +173,9 @@ class Transformer(nn.Module):
         feature_tokens, feature_weight = features
         he = self.tok_embeddings(feature_tokens)
         ve = self.num_embeddings(feature_weight)
+        # experiments show that multiplication is slightly better than addition
+        # but keep it simple according to Occam's razor rule
+        # hw = he * ve
         hw = he + ve
         h = self.dropout(hw)
 
