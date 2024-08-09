@@ -2,7 +2,10 @@
 predict from the trained model with PyTorch
 """
 from contextlib import nullcontext
+from typing import Literal, Optional
 import torch
+import pandas as pd
+from .data_common import DataReader
 from .preprocessor import preprocess
 from .tabular_transformer import ModelArgs, TabularTransformer
 from .tokenizer import Tokenizer
@@ -11,155 +14,211 @@ import random
 from .util import LossType
 import numpy as np
 from .metrics import calAUC
+from pathlib import Path
 
 
-# -----------------------------------------------------------------------------
-checkpoint = 'out/ckpt.pt'
+class Predictor:
+    data_reader: DataReader
+    checkpoint: str
+    seed: int
+    device_type: Literal['cuda', 'cpu']
+    has_truth: bool
+    batch_size: int
+    save_as: Optional[str | Path]
 
-predict_dataset = 'income/income_evaluation_validate.csv'
-has_truth = True
+    def __init__(self, checkpoint: str = 'out/ckpt.pt'):
+        checkpoint_path = Path(checkpoint)
+        assert checkpoint_path.exists(), \
+            f"checkpoint file: {checkpoint} not exists. Abort."
+        self.checkpoint = checkpoint_path
 
-batch_size = 128
-seed = 1337
+    def predict(self,
+                data_reader: DataReader,
+                has_truth: bool = True,
+                batch_size: int = 128,
+                save_as: Optional[str | Path] = None,
+                seed: int = 1337):
 
-# examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1', etc.
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-# dtype = 'bfloat16' if torch.cuda.is_available() and torch.cuda.is_bf16_supported() else 'float16' # 'float32' or 'bfloat16' or 'float16'
-dtype = "float32"
-compile = False  # use PyTorch 2.0 to compile the model to be faster
-# overrides from command line or config file
-exec(open('configurator.py').read())
-# -----------------------------------------------------------------------------
+        assert isinstance(data_reader, DataReader)
+        self.data_reader = data_reader
+        self.seed = seed
+        self.has_truth = has_truth
+        self.batch_size = batch_size
+        self.save_as = save_as
+        assert str(self.save_as).endswith('.csv'), \
+            "only support save as .csv file"
 
-rng = random.Random(seed)
-torch.manual_seed(seed)
-torch.cuda.manual_seed(seed)
-torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
-torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
+        self._initialize()
 
-# for later use in torch.autocast
-device_type = 'cuda' if 'cuda' in device else 'cpu'
-ptdtype = {'float32': torch.float32,
-           'bfloat16': torch.bfloat16, 'float16': torch.float16}[dtype]
+        self._load_checkpoint()
 
-ctx = nullcontext() if device_type == 'cpu' else torch.amp.autocast(
-    device_type=device_type, dtype=ptdtype)
+        self._init_model()
 
-# init from a model saved in a specific directory
-checkpoint_dict = torch.load(checkpoint, map_location=device)
-dataset_attr = checkpoint_dict['dataset_attr']
-train_config = checkpoint_dict['config']
-gptconf = ModelArgs(**checkpoint_dict['model_args'])
-model = TabularTransformer(gptconf)
+        self._init_tokenizer_dataset()
 
-state_dict = checkpoint_dict['model']
+        self._predict()
 
-unwanted_prefix = '_orig_mod.'
-for k, v in list(state_dict.items()):
-    if k.startswith(unwanted_prefix):
-        state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
-model.load_state_dict(state_dict, strict=False)
+        if self.truth_y is not None:
+            self._cal_loss(self.logits_array)
 
-model.eval()
-model.to(device)
+        if self.save_as is not None:
+            self._save_output()
 
-# load the tokenizer
-enc = Tokenizer(dataset_attr['feature_vocab'], dataset_attr['feature_type'])
+    def _initialize(self):
+        # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1', etc.
+        self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        self.dtype = 'bfloat16' if torch.cuda.is_available() \
+            and torch.cuda.is_bf16_supported() else 'float32'  # 'float32' or 'bfloat16' or 'float16'
 
-target_map = dataset_attr['target_map']
-assert target_map is not None
-loss_type = train_config['loss_type']
-assert LossType(
-    loss_type) is LossType.BINCE, "only support binary cross entropy loss"
+        # for later use in torch.autocast
+        self.device_type = 'cuda' if 'cuda' in self.device else 'cpu'
+        ptdtype = {'float32': torch.float32,
+                   'bfloat16': torch.bfloat16, 'float16': torch.float16}[self.dtype]
 
-predict_map = {v: k for k, v in target_map.items()}
+        self.rng = random.Random(self.seed)
+        torch.manual_seed(self.seed)
+        if self.device_type == 'cuda':
+            torch.cuda.manual_seed(self.seed)
+            torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
+            torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
 
-predict_dataframe = load_data(predict_dataset)
+        self.ctx = nullcontext() if self.device_type == 'cpu' else torch.amp.autocast(
+            device_type=self.device_type, dtype=ptdtype)
 
-if has_truth:
-    dataset_x = predict_dataframe.iloc[:, :-1]
-    truth_y = predict_dataframe.iloc[:, -1]
+    def _load_checkpoint(self):
+        # init from a model saved in a specific directory
+        checkpoint_dict = torch.load(
+            self.checkpoint, map_location=self.device)
+        self.checkpoint_dict = checkpoint_dict
+        self.dataset_attr = checkpoint_dict['features']
+        self.train_config = checkpoint_dict['config']
+        self.model_args = checkpoint_dict['model_args']
 
-else:
-    dataset_x = predict_dataframe
-    truth_y = None
-assert dataset_x.shape[1] == dataset_attr['num_cols']
+    def _init_model(self):
+        self.model = TabularTransformer(self.model_args)
 
+        state_dict = self.checkpoint_dict['model']
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+        unwanted_prefix = '_orig_mod.'
+        for k, v in list(state_dict.items()):
+            if k.startswith(unwanted_prefix):
+                state_dict[k[len(unwanted_prefix):]] = state_dict.pop(k)
+        self.model.load_state_dict(state_dict, strict=True)
 
+        self.model.eval()
+        self.model.to(self.device)
 
-accuracy_accum = {"n_samples": 0, "right": 0}
+    def _init_tokenizer_dataset(self):
+        # load the tokenizer
+        self.enc = Tokenizer(self.dataset_attr['feature_vocab'],
+                             self.dataset_attr['feature_type'])
 
+        loss_type = self.model_args.loss_type
+        assert LossType[loss_type] is LossType.BINCE, \
+            "only support binary cross entropy loss"
 
-def get_results(logits_arr):
-    prob_y = sigmoid(logits_arr)
-    result_val = np.where(prob_y > 0.5, 1, 0)
-    result_cls = np.vectorize(predict_map.get)(result_val)
-    return result_cls
+        self.target_map = self.dataset_attr['target_map']
+        assert self.target_map is not None
 
+        self.predict_map = {v: k for k, v in self.target_map.items()}
 
-def accum_accuracy(logits, truth=None):
-    if truth is None:
-        return
-    assert len(logits) == len(truth)
-    result_cls = get_results(logits)
-    equal_elements = np.sum(np.equal(result_cls, truth))
-    accuracy_accum['n_samples'] += len(logits)
-    accuracy_accum['right'] += equal_elements
+        predict_dataframe = self.data_reader.read_data_file()
 
+        if self.has_truth:
+            self.dataset_x = predict_dataframe.iloc[:, :-1]
+            self.truth_y = predict_dataframe.iloc[:, -1]
 
-def binary_cross_entropy_loss(logits, targets=None):
-    # Apply sigmoid to logits
-    probs = sigmoid(logits)
-    targets = np.vectorize(target_map.get)(targets)
-    # Compute binary cross-entropy loss
-    loss = - (targets * np.log(probs) + (1 - targets) * np.log(1 - probs))
-    # Return the mean loss
-    return np.mean(loss)
+        else:
+            self.dataset_x = predict_dataframe
+            self.truth_y = None
+        assert self.dataset_x.shape[1] == self.dataset_attr['max_seq_len']
 
+        self.accuracy_accum = {"n_samples": 0, "right": 0}
 
-logits_array = np.zeros(len(dataset_x), dtype=float)
+    def _predict(self):
 
-# run generation
-with torch.no_grad():
-    with ctx:
-        num_batches = (len(dataset_x) + batch_size - 1) // batch_size
-        for ix in range(num_batches):
-            # encode the beginning of the prompt
-            start = ix * batch_size
-            end = start + batch_size
+        self.logits_array = np.zeros(len(self.dataset_x), dtype=float)
 
-            x = dataset_x[start: end]
+        # run generation
+        with torch.no_grad():
+            with self.ctx:
+                num_batches = (len(self.dataset_x) +
+                               self.batch_size - 1) // self.batch_size
+                for ix in range(num_batches):
+                    # encode the beginning of the prompt
+                    start = ix * self.batch_size
+                    end = start + self.batch_size
 
-            truth = truth_y[start: end] if truth_y is not None else None
+                    x = self.dataset_x[start: end]
 
-            # preprocess the data
-            xp = preprocess(rng,
-                            x,
-                            dataset_attr['feature_type'],
-                            dataset_attr['feature_stats'],
-                            train_config['apply_power_transform'],
-                            train_config['remove_outlier'],
-                            )
-            tok_x = enc.encode(xp)
-            feature_tokens = tok_x[0].to(device, non_blocking=True)
-            feature_weight = tok_x[1].to(device, non_blocking=True)
-            logits = model.predict((feature_tokens, feature_weight))
-            logits_y = logits.squeeze(-1).to('cpu').numpy()
-            # save in the array
-            logits_array[start: end] = logits_y
+                    truth = self.truth_y[start: end] if self.truth_y is not None else None
 
-            accum_accuracy(logits_y, truth.to_numpy()
-                           if truth is not None else None)
+                    # preprocess the data
+                    xp = preprocess(self.rng,
+                                    x,
+                                    self.dataset_attr['feature_type'],
+                                    self.dataset_attr['feature_stats'],
+                                    self.train_config['apply_power_transform'],
+                                    self.train_config['remove_outlier'],
+                                    )
+                    tok_x = self.enc.encode(xp)
+                    feature_tokens = tok_x[0].to(
+                        self.device, non_blocking=True)
+                    feature_weight = tok_x[1].to(
+                        self.device, non_blocking=True)
+                    logits = self.model.predict(
+                        (feature_tokens, feature_weight))
+                    logits_y = logits.squeeze(-1) \
+                        .to('cpu', dtype=torch.float32).numpy()
 
-predict_result_array = get_results(logits_array)
+                    self.logits_array[start: end] = logits_y
 
-if truth_y is not None:
-    bce_loss = binary_cross_entropy_loss(logits_array, truth_y.to_numpy())
-    print(f"binary cross entropy loss: {bce_loss:.4f}")
-    auc_score = calAUC(truth_y.to_numpy(), logits_array)
-    print(f"auc score: {auc_score}")
-    print(f"samples: {accuracy_accum['n_samples']}, "
-          f"accuracy: {accuracy_accum['right'] / accuracy_accum['n_samples']:.2f}")
+                    self.accum_accuracy(logits_y, truth.to_numpy()
+                                        if truth is not None else None)
+        self.predict_result_array = self.get_results(self.logits_array)
+
+    def _save_output(self):
+        df = pd.DataFrame(self.predict_result_array,
+                          columns=['prediction_outputs'])
+        output_dir = Path(self.train_config['out_dir'])
+        output_dir.mkdir(parents=True, exist_ok=True)
+        filepath = output_dir / self.save_as
+        df.to_csv(filepath, index=False)
+        print(f"save prediction output to file: {filepath}")
+
+    def sigmoid(self, x):
+        return 1 / (1 + np.exp(-x))
+
+    def get_results(self, logits_arr):
+        prob_y = self.sigmoid(logits_arr)
+        result_val = np.where(prob_y > 0.5, 1, 0)
+        result_cls = np.vectorize(self.predict_map.get)(result_val)
+        return result_cls
+
+    def accum_accuracy(self, logits, truth=None):
+        if truth is None:
+            return
+        assert len(logits) == len(truth)
+        result_cls = self.get_results(logits)
+        equal_elements = np.sum(np.equal(result_cls, truth))
+        self.accuracy_accum['n_samples'] += len(logits)
+        self.accuracy_accum['right'] += equal_elements
+
+    def binary_cross_entropy_loss(self, logits, targets=None):
+        # Apply sigmoid to logits
+        probs = self.sigmoid(logits)
+        targets = np.vectorize(self.target_map.get)(targets)
+        # Compute binary cross-entropy loss
+        loss = - (targets * np.log(probs) +
+                  (1 - targets) * np.log(1 - probs))
+        # Return the mean loss
+        return np.mean(loss)
+
+    def _cal_loss(self, logits_array):
+        bce_loss = self.binary_cross_entropy_loss(
+            logits_array, self.truth_y.to_numpy())
+        print(f"binary cross entropy loss: {bce_loss:.4f}")
+        auc_score = calAUC(self.truth_y.to_numpy(), logits_array)
+        print(f"auc score: {auc_score}")
+        print(f"samples: {self.accuracy_accum['n_samples']}, "
+              f"accuracy: {self.accuracy_accum['right'] / self.accuracy_accum['n_samples']:.2f}")

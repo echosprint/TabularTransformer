@@ -4,3 +4,4 @@ from .dataloader import Task
 from .data_common import DataReader
 from .trainer import Trainer
 from .util import prepare_income_dataset
+from .predictor import Predictor
