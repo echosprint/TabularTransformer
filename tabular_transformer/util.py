@@ -1,5 +1,7 @@
 from enum import Enum
 import pandas as pd
+import warnings
+import os
 
 
 class TaskType(Enum):
@@ -78,3 +80,26 @@ def equals_except(dict1, dict2, ignore_key):
 
     # Compare the filtered dictionaries
     return filtered_dict1 == filtered_dict2
+
+
+def prepare_income_dataset():
+    warnings.filterwarnings('ignore', category=UserWarning)
+    website = "https://huggingface.co/datasets/scikit-learn/adult-census-income"
+    data_url = "hf://datasets/scikit-learn/adult-census-income/adult.csv"
+    fname = "income.csv"
+
+    data_cache_dir = os.path.join(os.getcwd(), 'data', fname.split('.')[0])
+    os.makedirs(data_cache_dir, exist_ok=True)
+    full_path = os.path.join(data_cache_dir, fname)
+
+    if not os.path.exists(full_path):
+        print(f"Downloading {data_url} to {fname} ...")
+        df = pd.read_csv(data_url)
+        df.to_csv(full_path, index=False)
+        print(f"save data at path: {full_path}")
+    else:
+        df = pd.read_csv(full_path)
+        print(f"{full_path} already exists, skipping download.")
+    print(f"more details see website: {website}")
+    warnings.filterwarnings('default', category=UserWarning)
+    return full_path
