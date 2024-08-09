@@ -1,6 +1,3 @@
-"""
-predict from the trained model with PyTorch
-"""
 from contextlib import nullcontext
 from typing import Literal, Optional
 import torch
