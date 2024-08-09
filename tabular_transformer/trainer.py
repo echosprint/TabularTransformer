@@ -272,8 +272,8 @@ class Trainer:
                             self.tp.batch_size * self.hp.gradient_accumulation_steps, dt)
                         running_mfu = mfu if running_mfu == -1.0 else 0.9 * running_mfu + 0.1 * mfu
                     print(
-                        f"{iter_num} | loss {lossf:.4f} | lr {lr:e} | {
-                            dt*1000:.2f}ms | mfu {running_mfu*100:.2f}%"
+                        f"{iter_num} | loss {lossf:.4f} | lr {lr:e} |"
+                        f"{dt*1000: .2f}ms | mfu {running_mfu*100: .2f}%"
                     )
                 iter_num += 1
                 local_iter_num += 1
