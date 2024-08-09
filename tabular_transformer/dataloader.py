@@ -22,6 +22,7 @@ class RawDataset():
     num_cols: int
     task_type: TaskType
     target_map: Optional[Dict[str, int]]
+    n_validate: int
 
     def __init__(self,
                  datareader: DataReader,
@@ -74,8 +75,8 @@ class RawDataset():
             frac=1.0, replace=False, random_state=self.seed)
 
         n_validate = int(len(self.dataset) * validate_split)
-        assert n_validate >= 0
-
+        assert len(self.dataset) > n_validate >= 0
+        self.n_validate = n_validate
         # Split the DataFrame
         dataset_validate = dataset_shuffled.iloc[:n_validate]
         dataset_train = dataset_shuffled.iloc[n_validate:]
@@ -171,8 +172,9 @@ class TabularDataset(torch.utils.data.IterableDataset):
 
         dataset_size = len(self.dataset_x)
         num_batches = dataset_size // self.batch_size
-        # assert num_batches > 0, "this dataset is too small? investigate."
-        assert dataset_size == 0 or self.batch_size <= dataset_size, "the batch size is too large for the dataset"
+
+        assert dataset_size > 0, "dataset is empty"
+        assert self.batch_size <= dataset_size, "the batch size is too large for the dataset"
 
         ixs = list(range(dataset_size))
         self.rng.shuffle(ixs)

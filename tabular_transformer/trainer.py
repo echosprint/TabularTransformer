@@ -225,8 +225,8 @@ class Trainer:
                 # evaluate the loss on train/val sets and write checkpoints
                 if iter_num % self.tp.eval_interval == 0:
                     losses = self._estimate_loss()
-                    print(f"step {iter_num}: train loss {
-                        losses['train']:.4f}, val loss {losses['val']:.4f}")
+                    print(f"""step {iter_num}: train loss {
+                        losses['train']:.4f}, val loss {losses['val']:.4f}""")
                     if self.ts.wandb_log:
                         self._log(wandb, iter_num, losses,
                                   current_lr, running_mfu)
@@ -518,7 +518,9 @@ class Trainer:
         out = {}
         eval_iters = self.ts.eval_iters
         self.model.eval()
-        for split in ["train", "val"]:
+        split_arr = ["train", "val"] \
+            if self.dataset.n_validate > 0 else ["train"]
+        for split in split_arr:
             k = 0
             losses = torch.zeros(eval_iters)  # keep on CPU
             while (k < eval_iters):
@@ -534,6 +536,7 @@ class Trainer:
                     if k >= eval_iters:
                         break
             out[split] = losses.mean()
+        out.setdefault('val', torch.tensor(0.))
         self.model.train()
         return out
 
