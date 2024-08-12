@@ -3,7 +3,7 @@ hello
 
 # Python init
 
-```py
+```py title="bubble_sort.py"
 import tabular_transformer as ttf
 import pandas as pd
 import torch
