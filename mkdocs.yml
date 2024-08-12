@@ -1,0 +1,4 @@
+site_name: My site
+site_url: https://echosprint.github.io/TabularTransformer/
+theme:
+  name: material
