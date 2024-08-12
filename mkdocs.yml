@@ -8,5 +8,7 @@ theme:
   palette:
     primary: black
     accent: grey
-    icon:
-      repo: fontawesome/brands/github
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tracking
