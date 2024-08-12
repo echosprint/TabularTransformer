@@ -1,7 +1,12 @@
 site_name: TabularTransformer
 site_url: https://echosprint.github.io/TabularTransformer/
+repo_url: https://github.com/echosprint/TabularTransformer
+repo_name: echosprint/TabularTransformer
+
 theme:
   name: material
   palette:
     primary: black
     accent: grey
+    icon:
+      repo: fontawesome/brands/github
