@@ -20,6 +20,7 @@ nav:
   - Home: index.md
   - Getting started:
     - Installation: getting-started.md
+    - income analysis: income_analysis.md
 
 # [Extensions]
 plugins:
