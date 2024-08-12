@@ -92,6 +92,9 @@ plaintrain:
 	@echo "Running $(TRAINSCRIPT)..."
 	$(PYTHON) $(TRAINSCRIPT) $(PLAINTRAIN_ARGS)
 
+nbconvert:
+	jupyter nbconvert --to markdown income_analysis.ipynb --output-dir=./docs
+
 # Clean target (optional)
 clean:
 	@echo "Cleaning up..."
