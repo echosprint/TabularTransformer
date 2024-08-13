@@ -1,4 +1,4 @@
-# HyperParameters
+## HyperParameters
 
 - **dim** (*int*): dimension of embedding. Default: `64`.
 - **n_layers** (*int*): number layers of Transformer blocks. Default: `6`.
@@ -13,7 +13,8 @@
 - **beta2** (*float*): beta2 in AdamW. Default: `0.95`.
 - **grad_clip** (*float*): clip gradients at this value, or disable if == 0.0. Default: `1.0`.
 
-# TrainSettings
+
+## TrainSettings
 
 - **out_dir** (*str*): output dir for checkpoints, predictions. Default: `"out"`.
 - **log_interval** (*int*): interval of iters for log print in terminal. Default: `1`.
@@ -32,7 +33,8 @@
 - **dtype** (*Literal["float32", "bfloat16", "float16"]*): pytorch dtype: float32|bfloat16|float16. Default: `"bfloat16"`.
 - **compile** (*bool*): use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+. Default: `False`.
 
-# TrainParameters
+
+## TrainParameters
 
 - **train_epochs** (*int*): train epochs for a dataset. Default: `200`.
 - **batch_size** (*int*): batch size per iter. Default: `128`.
@@ -49,4 +51,5 @@
 - **checkpoint** (*str*): default checkpoint file name. Default: `"ckpt.pt"`.
 - **input_checkpoint** (*str*): input checkpoint for resume training, if set, override `checkpoint`. Default: `None`.
 - **output_checkpoint** (*str*): output checkpoint for checkpoint save, if set, override `checkpoint`. Default: `None`.
+
 

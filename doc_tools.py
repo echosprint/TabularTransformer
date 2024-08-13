@@ -46,7 +46,7 @@ def parse_dataclass(file_path):
 def to_markdown(data):
     markdown = ""
     for class_name, fields in data.items():
-        markdown += f"# {class_name}\n\n"
+        markdown += f"## {class_name}\n\n"
         for field in fields:
             name = field['name']
             field_type = field['type']
@@ -56,7 +56,7 @@ def to_markdown(data):
             # Format each field
             markdown += f"""- **{name}** (*{field_type}*): {
                 comment}. Default: `{default}`.\n"""
-        markdown += "\n"  # Add a newline after each class
+        markdown += "\n\n"  # Add a newline after each class
     return markdown
 
 
