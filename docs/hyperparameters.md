@@ -29,6 +29,7 @@
 - **unk_ratio_default** (*float*): default unk ratio for training if not set in `unk_ratio` dict. Default: `0.2`.
 - **dataset_seed** (*int*): seed for dataset loader. Default: `42`.
 - **device** (*str*): train device, e.g. 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks. Default: `"cuda"`.
+- **dtype** (*Literal["float32", "bfloat16", "float16"]*): pytorch dtype: float32|bfloat16|float16. Default: `"bfloat16"`.
 - **compile** (*bool*): use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+. Default: `False`.
 
 # TrainParameters
@@ -36,12 +37,15 @@
 - **train_epochs** (*int*): train epochs for a dataset. Default: `200`.
 - **batch_size** (*int*): batch size per iter. Default: `128`.
 - **output_dim** (*int*): output dimension. Default: `1`.
+- **loss_type** (*Literal['BINCE', 'MULCE', 'MSE', 'SUPCON']*): train loss function: binary cross entropy, cross entropy, mean squared error, supervised contrastive loss. Default: `'BINCE'`.
 - **eval_interval** (*int*): interval of iters to start an evaluation. Default: `100`.
 - **validate_split** (*float*): split ratio of train data for validation. Default: `0.2`.
+- **unk_ratio** (*Dict[str, float]*): specify the unknown ratio of col, override the unk_ratio_default. Default: `field(default_factory=dict)`.
 - **learning_rate** (*float*): learning rate. Default: `5e-4`.
 - **transformer_lr** (*float*): transformer part learning rate, if set, override the `learning_rate`. Default: `None`.
 - **output_head_lr** (*float*): output head part learning rate, if set, override the `learning_rate`. Default: `None`.
 - **warmup_iters** (*int*): how many steps to warm up for. Default: `1000`.
+- **lr_scheduler** (*Literal['constant', 'cosine']*): learning rate scheduler. Default: `'cosine'`.
 - **checkpoint** (*str*): default checkpoint file name. Default: `"ckpt.pt"`.
 - **input_checkpoint** (*str*): input checkpoint for resume training, if set, override `checkpoint`. Default: `None`.
 - **output_checkpoint** (*str*): output checkpoint for checkpoint save, if set, override `checkpoint`. Default: `None`.

@@ -9,7 +9,9 @@ def parse_dataclass(file_path):
     current_comment = None
 
     class_pattern = re.compile(r'^class\s+(\w+)\(')
-    field_pattern = re.compile(r'^\s*(\w+):\s*([\w\[\],\'"]+)\s*=\s*(.+)\s*$')
+    # field_pattern = re.compile(r'^\s*(\w+):\s*([\w\[\],\'"]+)\s*=\s*(.+)\s*$')
+    field_pattern = re.compile(
+        r'^\s*(\w+):\s*([\w\[\],\'\"\.]+(?:\[[^\]]+\])?)\s*=\s*([^\s#]+)(\s*#.*)?$')
     comment_pattern = re.compile(r'^\s*#\s*(.+)$')
 
     for line in lines:
