@@ -21,7 +21,7 @@ nav:
   - Getting started:
     - Installation: getting-started.md
     - income analysis: income_analysis.md
-
+  - HyperParameters: hyperparameters.md
 # [Extensions]
 plugins:
   - search:

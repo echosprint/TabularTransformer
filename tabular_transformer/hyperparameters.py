@@ -6,108 +6,63 @@ from .data_common import DataclassTool
 
 @dataclass
 class HyperParameters(DataclassTool):
-    # I/O
-    # out_dir: str = "out"
-    # eval_interval: int = 1000
-    # log_interval: int = 1
-    # eval_iters: int = 100
-    # eval_only: bool = False  # if True, script exits right after the first eval
-    # if True, always save a checkpoint after each eval
-    # always_save_checkpoint: bool = False
-    # init_from: Literal["scratch", "resume", "resume_with_new_head"] = "scratch"
-    # checkpoint: str = "ckpt.pt"
-    # input_checkpoint: str = None
-    # output_checkpoint: str = None
-    # reset_iter_when_resume: bool = True  # reset the iter number when resume
-
-    # wandb logging
-    # wandb_log: bool = False  # disabled by default
-    # wandb_project: str = "TabularTransformer"
-    # wandb_run_name: str = "run_" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-
-    # data
-    # data_file: str = "income/income_evaluation_train"
-    # batch_size: int = 128  # if gradient_accumulation_steps > 1, this is the micro-batch size
-    # the dataset feature vocab size must <= transformer feature vocab size
-    # feature_vocab_size: int = 2048
-    # num_cols: int = 14
-    # # max_seq_len: int = 14
-    # min_cat_count: float = 0.02
-    # apply_power_transform: bool = True
-    # remove_outlier: bool = False
-    # unk_ratio: float = 0.2
-    # dataset_seed: int = 42
-
-    # train
-    # loss_type: Literal['BINCLASS', 'MULTICLASS', 'REGRESSION', 'SUPCON'] = 'BINCLASS'  # noqa: E501
-    # validate_split: float = 0.2
-    # pretrain (predict train / contrastive train)
-    # pretext_with_label: bool = True  # whether pretrain dataset has label in last column
-    # pretext_target_col: str = None  # pretrain pretext target column name
-    # pretext_col_unk_ratio: float = 0.75
-
-    # model
+    # dimension of embedding
     dim: int = 64
+    # number layers of Transformer blocks
     n_layers: int = 6
+    # number of attention heads
     n_heads: int = 8
-    # output_dim: int = 1  # final out dimension
+    # hidden layer dimension of output MLP head
     output_hidden_dim: int = 128
+    # squeeze the embedding dim to small output_forward_dim before concatenate all features for ouput MLP head
     output_forward_dim: int = 8
+    # make the hidden dim be multiple of
     multiple_of: int = 32
+    # dropout ratio
     dropout: float = 0.0
-    # finetune: bool = False
-
-    # adamw optimizer
-    gradient_accumulation_steps: int = 1  # used to simulate larger batch sizes
-    # learning_rate: float = 5e-4  # max learning rate
-    # for pretrained model paras scale lr to very low, 0. means frozen
-    # finetune_lr_scaler: float = 0.1
-    # max_epochs: int = 200  # total number of training epochs
+    # gradient accumulation steps before update, used to simulate larger batch sizes
+    gradient_accumulation_steps: int = 1
+    # weight decay in AdamW
     weight_decay: float = 1e-1
+    # beta1 in AdamW
     beta1: float = 0.9
+    # beta2 in AdamW
     beta2: float = 0.95
-    grad_clip: float = 1.0  # clip gradients at this value, or disable if == 0.0
-
-    # system
-    # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
-    # device: str = "cuda"
-    # # float32|bfloat16|float16
-    # dtype: Literal["float32", "bfloat16", "float16"] = "bfloat16"
-    # # use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+
-    # compile: bool = False
+    # clip gradients at this value, or disable if == 0.0
+    grad_clip: float = 1.0
 
 
 @dataclass
 class TrainSettings(DataclassTool):
-    # I/O
+    # output dir for checkpoints, predictions
     out_dir: str = "out"
+    # interval of iters for log print in terminal
     log_interval: int = 1
-
+    # interval of iters for evaluate the model
     eval_iters: int = 100
-    eval_only: bool = False  # if True, script exits right after the first eval
-
+    # if True, script exits right after the first eval
+    eval_only: bool = False
+    # always save checkpoint no matter the evaluation is good or bad
     always_save_checkpoint: bool = False
-
-    # reset_iter_when_resume: bool = True  # reset the iter number when resume
-
     # wandb logging
-    wandb_log: bool = False  # disabled by default
+    wandb_log: bool = False
+    # wandb project name
     wandb_project: str = "TabularTransformer"
-    # wandb_run_name: str = "run_" + datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    # wandb run name
     wandb_run_name: str = "run"
-
-    # num_cols: int = 14
-    # max_seq_len: int = 14
+    # for categorical columns, the frequency of a class larger than `min_cat_count` will be consider a valid class, otherwise labeled as `UNKNOWN`
     min_cat_count: float = 0.02
+    # apply power transform for numerical columns
     apply_power_transform: bool = True
+    # remove outliers
     remove_outlier: bool = False
+    # default unk ratio for training if not set in `unk_ratio` dict
     unk_ratio_default: float = 0.2
+    # seed for dataset loader
     dataset_seed: int = 42
-
-    # system
-    # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
+    # train device, e.g. 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
     device: str = "cuda"
-    # float32|bfloat16|float16
+    # pytorch dtype: float32|bfloat16|float16
     dtype: Literal["float32", "bfloat16", "float16"] = "bfloat16"
     # use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+
     compile: bool = False
@@ -115,46 +70,63 @@ class TrainSettings(DataclassTool):
 
 @dataclass
 class TrainParameters(DataclassTool):
-
+    # train epochs for a dataset
     train_epochs: int = 200
+    # batch size per iter
     batch_size: int = 128
+    # output dimension
     output_dim: int = 1
+    # train loss function: binary cross entropy, cross entropy, mean squared error, supervised contrastive loss
     loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
+    # interval of iters to start an evaluation
     eval_interval: int = 100
+    # split ratio of train data for validation
     validate_split: float = 0.2
-    # pretext_target_col: str = None
-    # pretext_with_label: bool = True
+    # specify the unknown ratio of col, override the unk_ratio_default
     unk_ratio: Dict[str, float] = field(default_factory=dict)
-
-    # learning rate and decay settings
+    # learning rate
     learning_rate: float = 5e-4
+    # transformer part learning rate, if set, override the `learning_rate`
     transformer_lr: float = None
+    # output head part learning rate, if set, override the `learning_rate`
     output_head_lr: float = None
-    # decay_lr: bool = True  # whether to decay the learning rate
-    warmup_iters: int = 1000  # how many steps to warm up for
+    # how many steps to warm up for
+    warmup_iters: int = 1000
+    # learning rate scheduler
     lr_scheduler: Literal['constant', 'cosine'] = 'cosine'
-
-    # checkpoint
+    # default checkpoint file name
     checkpoint: str = "ckpt.pt"
+    # input checkpoint for resume training, if set, override `checkpoint`
     input_checkpoint: str = None
+    # output checkpoint for checkpoint save, if set, override `checkpoint`
     output_checkpoint: str = None
 
 
 @dataclass
 class ModelArgs(DataclassTool):
-    # default hyperparameters for the Llama 7B model
+    # dimension of embedding
     dim: int = 1024
+    # number layers
     n_layers: int = 16
+    # attention head
     n_heads: int = 8
+    # loss function
     loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
     # sum of cardinality of categorical feature and numerical feature, plus [UNKNOWN] for each feature
     feature_vocab_size: int = 2048
-    output_dim: int = 1  # final out dimension
+    # final out dimension
+    output_dim: int = 1
+    # hidden dim in output head
     output_hidden_dim: int = 128
+    # squeeze the embedding dim to `output_forward_dim` before concatenate
     output_forward_dim: int = 8
+    # hidden_dim in MLP
     hidden_dim: Optional[int] = None
-    multiple_of: int = 256  # MLP hidden layer size will be multiple of
+    # MLP hidden layer size will be multiple of
+    multiple_of: int = 256
+    # eps added when normalization
     norm_eps: float = 1e-5
-    max_seq_len: int = 1024  # max columns of tabular data
+    # max columns of tabular data
+    max_seq_len: int = 1024
+    # drop out
     dropout: float = 0.0
-    # finetune: bool = False  # enable finetune to adjust the learn rate
