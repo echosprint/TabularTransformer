@@ -4,7 +4,7 @@
 - **n_layers** (*int*): number layers of Transformer blocks. Default: `6`.
 - **n_heads** (*int*): number of attention heads. Default: `8`.
 - **output_hidden_dim** (*int*): hidden layer dimension of output MLP head. Default: `128`.
-- **output_forward_dim** (*int*): squeeze the embedding dim to small output_forward_dim before concatenate all features for ouput MLP head. Default: `8`.
+- **output_forward_dim** (*int*): squeeze the embedding dim to small `output_forward_dim` before concatenate all features as input for MLP. Default: `8`.
 - **multiple_of** (*int*): make the hidden dim be multiple of. Default: `32`.
 - **dropout** (*float*): dropout ratio. Default: `0.0`.
 - **gradient_accumulation_steps** (*int*): gradient accumulation steps before update, used to simulate larger batch sizes. Default: `1`.
@@ -29,8 +29,8 @@
 - **remove_outlier** (*bool*): remove outliers. Default: `False`.
 - **unk_ratio_default** (*float*): default unk ratio for training if not set in `unk_ratio` dict. Default: `0.2`.
 - **dataset_seed** (*int*): seed for dataset loader. Default: `42`.
-- **device** (*str*): train device, e.g. 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks. Default: `"cuda"`.
-- **dtype** (*Literal["float32", "bfloat16", "float16"]*): pytorch dtype: float32|bfloat16|float16. Default: `"bfloat16"`.
+- **device** (*str*): train device, e.g. `cpu`, `cuda`, `cuda:0`, `cuda:1` etc., or try `mps` on macbooks. Default: `"cuda"`.
+- **dtype** (*Literal["float32", "bfloat16", "float16"]*): pytorch dtype: `float32` | `bfloat16` | `float16`. Default: `"bfloat16"`.
 - **compile** (*bool*): use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+. Default: `False`.
 
 
@@ -39,10 +39,10 @@
 - **train_epochs** (*int*): train epochs for a dataset. Default: `200`.
 - **batch_size** (*int*): batch size per iter. Default: `128`.
 - **output_dim** (*int*): output dimension. Default: `1`.
-- **loss_type** (*Literal['BINCE', 'MULCE', 'MSE', 'SUPCON']*): train loss function: binary cross entropy, cross entropy, mean squared error, supervised contrastive loss. Default: `'BINCE'`.
+- **loss_type** (*Literal['BINCE', 'MULCE', 'MSE', 'SUPCON']*): train loss function: `binary cross entropy`, `cross entropy`, `mean squared error`, `supervised contrastive loss`. Default: `'BINCE'`.
 - **eval_interval** (*int*): interval of iters to start an evaluation. Default: `100`.
 - **validate_split** (*float*): split ratio of train data for validation. Default: `0.2`.
-- **unk_ratio** (*Dict[str, float]*): specify the unknown ratio of col, override the unk_ratio_default. Default: `field(default_factory=dict)`.
+- **unk_ratio** (*Dict[str, float]*): specify the unknown ratio of col, override the `unk_ratio_default`. Default: `field(default_factory=dict)`.
 - **learning_rate** (*float*): learning rate. Default: `5e-4`.
 - **transformer_lr** (*float*): transformer part learning rate, if set, override the `learning_rate`. Default: `None`.
 - **output_head_lr** (*float*): output head part learning rate, if set, override the `learning_rate`. Default: `None`.

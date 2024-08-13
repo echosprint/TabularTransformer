@@ -14,7 +14,7 @@ class HyperParameters(DataclassTool):
     n_heads: int = 8
     # hidden layer dimension of output MLP head
     output_hidden_dim: int = 128
-    # squeeze the embedding dim to small output_forward_dim before concatenate all features for ouput MLP head
+    # squeeze the embedding dim to small `output_forward_dim` before concatenate all features as input for MLP
     output_forward_dim: int = 8
     # make the hidden dim be multiple of
     multiple_of: int = 32
@@ -60,9 +60,9 @@ class TrainSettings(DataclassTool):
     unk_ratio_default: float = 0.2
     # seed for dataset loader
     dataset_seed: int = 42
-    # train device, e.g. 'cpu', 'cuda', 'cuda:0', 'cuda:1' etc., or try 'mps' on macbooks
+    # train device, e.g. `cpu`, `cuda`, `cuda:0`, `cuda:1` etc., or try `mps` on macbooks
     device: str = "cuda"
-    # pytorch dtype: float32|bfloat16|float16
+    # pytorch dtype: `float32` | `bfloat16` | `float16`
     dtype: Literal["float32", "bfloat16", "float16"] = "bfloat16"
     # use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+
     compile: bool = False
@@ -76,13 +76,13 @@ class TrainParameters(DataclassTool):
     batch_size: int = 128
     # output dimension
     output_dim: int = 1
-    # train loss function: binary cross entropy, cross entropy, mean squared error, supervised contrastive loss
+    # train loss function: `binary cross entropy`, `cross entropy`, `mean squared error`, `supervised contrastive loss`
     loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
     # interval of iters to start an evaluation
     eval_interval: int = 100
     # split ratio of train data for validation
     validate_split: float = 0.2
-    # specify the unknown ratio of col, override the unk_ratio_default
+    # specify the unknown ratio of col, override the `unk_ratio_default`
     unk_ratio: Dict[str, float] = field(default_factory=dict)
     # learning rate
     learning_rate: float = 5e-4
@@ -112,7 +112,7 @@ class ModelArgs(DataclassTool):
     n_heads: int = 8
     # loss function
     loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
-    # sum of cardinality of categorical feature and numerical feature, plus [UNKNOWN] for each feature
+    # sum of cardinality of categorical feature and numerical feature, plus [`UNKNOWN`] for each feature
     feature_vocab_size: int = 2048
     # final out dimension
     output_dim: int = 1
