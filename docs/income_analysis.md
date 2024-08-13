@@ -58,101 +58,11 @@ df.head(3)
 
 
 
-<div>
-<style scoped>
-    .dataframe tbody tr th:only-of-type {
-        vertical-align: middle;
-    }
-
-    .dataframe tbody tr th {
-        vertical-align: top;
-    }
-
-    .dataframe thead th {
-        text-align: right;
-    }
-</style>
-<table border="1" class="dataframe">
-  <thead>
-    <tr style="text-align: right;">
-      <th></th>
-      <th>age</th>
-      <th>workclass</th>
-      <th>fnlwgt</th>
-      <th>education</th>
-      <th>education.num</th>
-      <th>marital.status</th>
-      <th>occupation</th>
-      <th>relationship</th>
-      <th>race</th>
-      <th>sex</th>
-      <th>capital.gain</th>
-      <th>capital.loss</th>
-      <th>hours.per.week</th>
-      <th>native.country</th>
-      <th>income</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th>0</th>
-      <td>90</td>
-      <td>?</td>
-      <td>77053</td>
-      <td>HS-grad</td>
-      <td>9</td>
-      <td>Widowed</td>
-      <td>?</td>
-      <td>Not-in-family</td>
-      <td>White</td>
-      <td>Female</td>
-      <td>0</td>
-      <td>4356</td>
-      <td>40</td>
-      <td>United-States</td>
-      <td>&lt;=50K</td>
-    </tr>
-    <tr>
-      <th>1</th>
-      <td>82</td>
-      <td>Private</td>
-      <td>132870</td>
-      <td>HS-grad</td>
-      <td>9</td>
-      <td>Widowed</td>
-      <td>Exec-managerial</td>
-      <td>Not-in-family</td>
-      <td>White</td>
-      <td>Female</td>
-      <td>0</td>
-      <td>4356</td>
-      <td>18</td>
-      <td>United-States</td>
-      <td>&lt;=50K</td>
-    </tr>
-    <tr>
-      <th>2</th>
-      <td>66</td>
-      <td>?</td>
-      <td>186061</td>
-      <td>Some-college</td>
-      <td>10</td>
-      <td>Widowed</td>
-      <td>?</td>
-      <td>Unmarried</td>
-      <td>Black</td>
-      <td>Female</td>
-      <td>0</td>
-      <td>4356</td>
-      <td>40</td>
-      <td>United-States</td>
-      <td>&lt;=50K</td>
-    </tr>
-  </tbody>
-</table>
-</div>
-
-
+|    | age | workclass | fnlwgt | education   | education.num | marital.status | occupation      | relationship   | race  | sex    | capital.gain | capital.loss | hours.per.week | native.country | income |
+|----|-----|-----------|--------|-------------|---------------|----------------|-----------------|----------------|-------|--------|--------------|--------------|----------------|----------------|--------|
+| 0  | 90  | ?         | 77053  | HS-grad     | 9             | Widowed        | ?               | Not-in-family  | White | Female | 0            | 4356         | 40             | United-States  | <=50K  |
+| 1  | 82  | Private   | 132870 | HS-grad     | 9             | Widowed        | Exec-managerial | Not-in-family  | White | Female | 0            | 4356         | 18             | United-States  | <=50K  |
+| 2  | 66  | ?         | 186061 | Some-college| 10            | Widowed        | ?               | Unmarried      | Black | Female | 0            | 4356         | 40             | United-States  | <=50K  |
 
 
 ```python
