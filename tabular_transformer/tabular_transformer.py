@@ -195,6 +195,7 @@ class ForwardOutPut(nn.Module):
         self.forward_dim = params.output_forward_dim
         self.dim = params.dim
         self.output_dim = output_dim if output_dim is not None else params.output_dim
+        assert self.output_dim > 0, "`output_dim` must be larger than 0"
         self.hidden_cat_dim = params.max_seq_len * self.forward_dim
 
         self.w1 = nn.Linear(self.dim, self.hidden_dim, bias=bias)
