@@ -60,6 +60,8 @@ class TrainSettings(DataclassTool):
     unk_ratio_default: float = 0.2
     # seed for dataset loader
     dataset_seed: int = 42
+    # seed for torch
+    torch_seed: int = 1377
     # train device, e.g. `cpu`, `cuda`, `cuda:0`, `cuda:1` etc., or try `mps` on macbooks
     device: str = "cuda"
     # pytorch dtype: `float32` | `bfloat16` | `float16`

@@ -319,7 +319,7 @@ class Trainer:
     def _create_model(self):
 
         # init seed before create model
-        torch.manual_seed(1358420937)
+        torch.manual_seed(self.ts.torch_seed)
         # when enabled, pyTorch is allowed to use the TensorFloat32 (TF32) tensor cores
         torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
         torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
