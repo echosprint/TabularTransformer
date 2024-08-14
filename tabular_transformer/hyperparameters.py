@@ -38,7 +38,7 @@ class TrainSettings(DataclassTool):
     out_dir: str = "out"
     # interval of iters for log print in terminal
     log_interval: int = 1
-    # interval of iters for evaluate the model
+    # iters run for evaluate the model
     eval_iters: int = 100
     # if True, script exits right after the first eval
     eval_only: bool = False
