@@ -116,6 +116,9 @@ class Trainer:
         self.lr_scheduler = self.tp.lr_scheduler
         assert self.lr_scheduler in ('constant', 'cosine')
 
+        assert self.tp.loss_type != 'SUPCON' or self.tp.output_dim % 16 == 0, \
+            "`output_dim` must be multiple of 16 for `SUPCON` loss type."
+
         self.train_rng = random.Random(self.ts.dataset_seed)
 
         self.loss_type = self.tp.loss_type
@@ -147,11 +150,6 @@ class Trainer:
         config = self.hp.asdict() | self.ts.asdict() | self.tp.asdict()
 
         os.makedirs(self.ts.out_dir, exist_ok=True)
-        torch.manual_seed(1358420937)
-
-        # when enabled, pyTorch is allowed to use the TensorFloat32 (TF32) tensor cores
-        torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
-        torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
 
         # for later use in torch.autocast
         self.device_type = "cuda" if "cuda" in self.ts.device else "cpu"
@@ -319,6 +317,13 @@ class Trainer:
             self.ts.out_dir, self.output_checkpoint))
 
     def _create_model(self):
+
+        # init seed before create model
+        torch.manual_seed(1358420937)
+        # when enabled, pyTorch is allowed to use the TensorFloat32 (TF32) tensor cores
+        torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
+        torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
+
         self.model_args = ModelArgs(
             dim=self.hp.dim,
             n_layers=self.hp.n_layers,
@@ -395,6 +400,9 @@ class Trainer:
         assert self.task_type is not TaskType.REGRESSION or \
             self.loss_type in ('MSE',), \
             "only MSE loss could be used for regression task"
+
+        assert all(k in self.feature_type for k in self.tp.unk_ratio), \
+            "column specified in `unk_ratio` not exists in the dataset"
 
     def _load_checkpoint(self):
         ckpt_path = os.path.join(
