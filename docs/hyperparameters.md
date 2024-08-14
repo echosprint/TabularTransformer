@@ -18,7 +18,7 @@
 
 - **out_dir** (*str*): output dir for checkpoints, predictions. Default: `"out"`.
 - **log_interval** (*int*): interval of iters for log print in terminal. Default: `1`.
-- **eval_iters** (*int*): interval of iters for evaluate the model. Default: `100`.
+- **eval_iters** (*int*): iters run for evaluate the model. Default: `100`.
 - **eval_only** (*bool*): if True, script exits right after the first eval. Default: `False`.
 - **always_save_checkpoint** (*bool*): always save checkpoint no matter the evaluation is good or bad. Default: `False`.
 - **wandb_log** (*bool*): wandb logging. Default: `False`.
@@ -29,6 +29,7 @@
 - **remove_outlier** (*bool*): remove outliers. Default: `False`.
 - **unk_ratio_default** (*float*): default unk ratio for training if not set in `unk_ratio` dict. Default: `0.2`.
 - **dataset_seed** (*int*): seed for dataset loader. Default: `42`.
+- **torch_seed** (*int*): seed for torch. Default: `1377`.
 - **device** (*str*): train device, e.g. `cpu`, `cuda`, `cuda:0`, `cuda:1` etc., or try `mps` on macbooks. Default: `"cuda"`.
 - **dtype** (*Literal["float32", "bfloat16", "float16"]*): pytorch dtype: `float32` | `bfloat16` | `float16`. Default: `"bfloat16"`.
 - **compile** (*bool*): use PyTorch 2.0 to compile the model to be faster, comiple not work on Python 3.12+. Default: `False`.
