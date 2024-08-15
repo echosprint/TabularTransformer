@@ -90,15 +90,29 @@ def equals_except(dict1, dict2, ignore_key):
 
 
 def prepare_income_dataset():
-    warnings.filterwarnings('ignore', category=UserWarning)
     website = "https://huggingface.co/datasets/scikit-learn/adult-census-income"
     data_url = "hf://datasets/scikit-learn/adult-census-income/adult.csv"
     fname = "income.csv"
+    income_path = prepare_dataset(data_url, fname, website)
+    return income_path
+
+
+def prepare_fish_dataset():
+    website = "https://huggingface.co/datasets/scikit-learn/Fish"
+    data_url = "hf://datasets/scikit-learn/Fish/Fish.csv"
+    fname = "fish.csv"
+    fish_path = prepare_dataset(data_url, fname, website)
+    return fish_path
+
+
+def prepare_dataset(data_url, fname, website):
+    warnings.filterwarnings('ignore', category=UserWarning)
 
     data_cache_dir = os.path.join(os.getcwd(), 'data', fname.split('.')[0])
     os.makedirs(data_cache_dir, exist_ok=True)
     full_path = os.path.join(data_cache_dir, fname)
 
+    print(f"more details see website: {website}")
     if not os.path.exists(full_path):
         print(f"Downloading {data_url} to {fname} ...")
         df = pd.read_csv(data_url)
@@ -107,6 +121,5 @@ def prepare_income_dataset():
     else:
         df = pd.read_csv(full_path)
         print(f"{full_path} already exists, skipping download.")
-    print(f"more details see website: {website}")
     warnings.filterwarnings('default', category=UserWarning)
     return full_path
