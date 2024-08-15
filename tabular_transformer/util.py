@@ -74,12 +74,19 @@ def equals_except(dict1, dict2, ignore_key):
         # Convert to a list for consistent processing
         ignore_key = [ignore_key]
 
-    # Create new dictionaries excluding the keys to ignore
-    filtered_dict1 = {k: v for k, v in dict1.items() if k not in ignore_key}
-    filtered_dict2 = {k: v for k, v in dict2.items() if k not in ignore_key}
+    fdict1 = {k: v for k, v in dict1.items() if k not in ignore_key}
+    fdict2 = {k: v for k, v in dict2.items() if k not in ignore_key}
+
+    union_keys = set(fdict1.keys()) | set(fdict2.keys())
+
+    diff_dict = {key: (fdict1.get(key, None),
+                       fdict2.get(key, None))
+                 for key in union_keys
+                 if fdict1.get(key, None) !=
+                 fdict2.get(key, None)}
 
     # Compare the filtered dictionaries
-    return filtered_dict1 == filtered_dict2
+    return fdict1 == fdict2, diff_dict
 
 
 def prepare_income_dataset():
