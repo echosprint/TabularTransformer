@@ -1,71 +1,109 @@
-import unittest
-from tokenizer import Tokenizer
-from util import CATEGORICAL_UNK, SCALAR_UNK, SCALAR_NUMERIC, FeatureType, TaskType
-import numpy as np
+import tabular_transformer as ttf
 import pandas as pd
-from tabular_transformer import Transformer, ModelArgs
-from preprocessor import data_stats, generate_feature_vocab
+import torch
+
+income_dataset_path = ttf.prepare_income_dataset()
 
 
-class TestTokenizer(unittest.TestCase):
+class IncomeDataReader(ttf.DataReader):
+    ensure_categorical_cols = [
+        'workclass', 'education',
+        'marital.status', 'occupation',
+        'relationship', 'race', 'sex',
+        'native.country', 'income']
 
-    def test_encode(self):
-        feature_vocab = {
-            f"Name_{CATEGORICAL_UNK}":    0,
-            "Name_Alice":                 1,
-            "Name_Bob":                   2,
-            "Name_Charlie":               3,
-            f"Age_{SCALAR_UNK}":          4,
-            f"Age_{SCALAR_NUMERIC}":      5,
-            f"City_{CATEGORICAL_UNK}":    6,
-            "City_San Francisco":         7,
-            "City_Los Angeles":           8,
-            f"Income_{SCALAR_UNK}":       9,
-            f"Income_{SCALAR_NUMERIC}":   10,
-        }
+    ensure_numerical_cols = [
+        'age', 'fnlwgt', 'education.num',
+        'capital.gain', 'capital.loss',
+        'hours.per.week']
 
-        feature_type = {
-            "Name": FeatureType.CATEGORICAL,
-            "Age": FeatureType.NUMERICAL,
-            "City": FeatureType.CATEGORICAL,
-            "Income": FeatureType.NUMERICAL,
-        }
-
-        data = {
-            'Name': ['Alice', 'Bob', CATEGORICAL_UNK, 'Charlie'],
-            'Age': [-1.1547, np.nan, 0.5774, 0.5774],
-            'City': [CATEGORICAL_UNK, 'San Francisco', 'Los Angeles', 'Los Angeles'],
-            'Income': [-0.1650, 1.0722, -0.9073, np.nan]
-        }
-
-        tokenizer = Tokenizer(feature_type=feature_type,
-                              feature_vocab=feature_vocab)
-        print(tokenizer.feature_vocab_item)
-        self.assertEqual(tokenizer.feature_vocab_size, 11)
-        df = pd.DataFrame(data)
-        print(df)
-        enc = tokenizer.encode(df)
-        print(enc[0], '\n', enc[1])
-
-        model_args = ModelArgs()
-        transformer = Transformer(model_args)
-        result = transformer(enc[0], enc[1], TaskType.BINCLASS)
-        # transformer.configure_optimizers(0.98,0.02,[0.98, 0.97],'cuda')
-        print(result)
+    def read_data_file(self, file_path):
+        df = pd.read_csv(file_path)
+        return df
 
 
-class TestPreprocessor(unittest.TestCase):
+class PretrainIncomeDataReader(IncomeDataReader):
+    ensure_categorical_cols = [
+        'pretext_target'
+        if x == 'income' else x
+        for x in IncomeDataReader.ensure_categorical_cols]
 
-    def test_static(self):
-        data = {
-            'Name': ['Alice', 'Alice', 'Cda', 'Charlie'],
-            'Age': [-1.1547, np.nan, 0.5774, 0.5774],
-            'City': ['lssa', 'San Francisco', 'Los Angeles', 'Los Angeles'],
-            'Income': [-0.1650, 1.0722, -0.9073, np.nan]
-        }
-        stats, _ = data_stats(pd.DataFrame(data), 2)
-        print(generate_feature_vocab(stats))
+    def read_data_file(self, file_path):
+        df = pd.read_csv(file_path)
+        df.drop(columns=['income'], inplace=True)
+        df['pretext_target'] = df['occupation']
+        return df
 
 
-if __name__ == '__main__':
-    unittest.main()
+income_reader = IncomeDataReader(income_dataset_path)
+df = income_reader.read_data_file()
+df.head(3)
+
+split = income_reader.split_data(
+    {'pretrain': 0.8, 'finetune': 64, 'ssl_test': -1})
+print(split)
+
+pretrain_reader = PretrainIncomeDataReader(split['pretrain'])
+pdf = pretrain_reader.read_data_file()
+pdf.head(3)
+
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+dtype = 'bfloat16' if torch.cuda.is_available() \
+    and torch.cuda.is_bf16_supported() else 'float16'
+
+ts = ttf.TrainSettings(wandb_log=False,
+                       device=device,
+                       dtype=dtype,
+                       )
+
+
+hp = ttf.HyperParameters(dim=64,
+                         n_layers=6)
+
+trainer = ttf.Trainer(hp=hp, ts=ts)
+
+pretrain_tp = ttf.TrainParameters(
+    train_epochs=30,
+    loss_type='SUPCON',
+    batch_size=128,
+    output_dim=16,
+    unk_ratio={'occupation': 0.50},
+    eval_interval=100,
+    eval_iters=20,
+    warmup_iters=500,
+    validate_split=0.2,
+    output_checkpoint='pretrain_ckpt.pt')
+
+trainer.train(
+    data_reader=pretrain_reader,
+    tp=pretrain_tp,
+    resume=False)
+
+
+finetune_tp = ttf.TrainParameters(
+    # transformer_lr=0.0,
+    transformer_lr=5e-6,
+    output_head_lr=5e-5,
+    lr_scheduler='constant',
+    train_epochs=250,
+    loss_type='BINCE',
+    batch_size=64,
+    output_dim=1,
+    eval_interval=249,
+    always_save_checkpoint=True,
+    eval_iters=1,
+    warmup_iters=10,
+    validate_split=0.0,
+    input_checkpoint='pretrain_ckpt.pt',
+    output_checkpoint='finetune_ckpt.pt',
+)
+
+trainer.train(
+    data_reader=IncomeDataReader(split['finetune']),
+    tp=finetune_tp,
+    resume=True,
+    replace_output_head=True)
+
+predictor = ttf.Predictor(checkpoint='out/finetune_ckpt.pt')
+predictor.predict(data_reader=IncomeDataReader(split['ssl_test']),
+                  save_as="prediction_output.csv")
