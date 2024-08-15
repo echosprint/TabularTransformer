@@ -66,6 +66,7 @@ class Trainer:
 
     # random generator
     train_rng: random.Random
+    loss_rng: random.Random
 
     def __init__(self, hp: HyperParameters, ts: TrainSettings):
         assert isinstance(hp, HyperParameters)
@@ -119,7 +120,8 @@ class Trainer:
         assert self.tp.loss_type != 'SUPCON' or self.tp.output_dim % 16 == 0, \
             "`output_dim` must be multiple of 16 for `SUPCON` loss type."
 
-        self.train_rng = random.Random(self.ts.dataset_seed)
+        self.train_rng = random.Random(self.ts.dataset_seed + 138321)
+        self.loss_rng = random.Random(self.ts.dataset_seed + 140987)
 
         self.loss_type = self.tp.loss_type
 
@@ -535,7 +537,7 @@ class Trainer:
             k = 0
             losses = torch.zeros(eval_iters)  # keep on CPU
             while (k < eval_iters):
-                seed = self.train_rng.randint(1024, 1024*1024)
+                seed = self.loss_rng.randint(1024, 1024*1024)
                 batch_iter = self.iter_batches(
                     split=split, seed=seed)
                 for X, Y in batch_iter:
