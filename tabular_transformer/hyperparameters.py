@@ -38,12 +38,8 @@ class TrainSettings(DataclassTool):
     out_dir: str = "out"
     # interval of iters for log print in terminal
     log_interval: int = 1
-    # iters run for evaluate the model
-    eval_iters: int = 100
     # if True, script exits right after the first eval
     eval_only: bool = False
-    # always save checkpoint no matter the evaluation is good or bad
-    always_save_checkpoint: bool = False
     # wandb logging
     wandb_log: bool = False
     # wandb project name
@@ -82,6 +78,8 @@ class TrainParameters(DataclassTool):
     loss_type: Literal['BINCE', 'MULCE', 'MSE', 'SUPCON'] = 'BINCE'  # noqa: E501
     # interval of iters to start an evaluation
     eval_interval: int = 100
+    # iters run for evaluate the model
+    eval_iters: int = 100
     # split ratio of train data for validation
     validate_split: float = 0.2
     # specify the unknown ratio of col, override the `unk_ratio_default`
@@ -102,6 +100,8 @@ class TrainParameters(DataclassTool):
     input_checkpoint: str = None
     # output checkpoint for checkpoint save, if set, override `checkpoint`
     output_checkpoint: str = None
+    # always save checkpoint no matter the evaluation is good or bad
+    always_save_checkpoint: bool = False
 
 
 @dataclass

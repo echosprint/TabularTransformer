@@ -228,7 +228,7 @@ class Trainer:
                     if self.ts.wandb_log:
                         self._log(wandb, iter_num, losses,
                                   current_lr, running_mfu)
-                    if losses["val"] < best_val_loss or self.ts.always_save_checkpoint:
+                    if losses["val"] < best_val_loss or self.tp.always_save_checkpoint:
                         best_val_loss = losses["val"]
                         if iter_num > 0:
                             self._save_checkpoint(
@@ -341,10 +341,13 @@ class Trainer:
 
         if self.resume:
             checkpoint_model_args: ModelArgs = self.checkpoint["model_args"]
-            if not equals_except(model_args_dict,
-                                 checkpoint_model_args.asdict(),
-                                 ['loss_type', 'output_dim, dropout']):
-                raise ValueError('model_args not consistent with checkpoint')
+            equal, diff = equals_except(
+                model_args_dict,
+                checkpoint_model_args.asdict(),
+                ['loss_type', 'output_dim', 'dropout'])
+            if not equal:
+                raise ValueError(
+                    f'model_args not consistent with checkpoint: {diff}')
             model_args_dict['output_dim'] = checkpoint_model_args.output_dim
 
         self.model = TabularTransformer(ModelArgs(**model_args_dict))
@@ -524,7 +527,7 @@ class Trainer:
     @torch.no_grad()
     def _estimate_loss(self):
         out = {}
-        eval_iters = self.ts.eval_iters
+        eval_iters = self.tp.eval_iters
         self.model.eval()
         split_arr = ["train", "val"] \
             if self.dataset.n_validate > 0 else ["train"]
