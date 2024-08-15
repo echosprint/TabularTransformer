@@ -287,6 +287,10 @@ class Trainer:
             if self.ts.eval_only:
                 break
 
+        if self.tp.always_save_checkpoint:
+            self._save_checkpoint(
+                iter_num, best_val_loss, config)
+
     def _log(self, wandb, iter_num, losses, lr, running_mfu):
         try:
             log_dict = {
