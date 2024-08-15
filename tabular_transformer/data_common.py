@@ -86,8 +86,8 @@ class DataReader(metaclass=ReaderMeta):
             df, pd.DataFrame), "method `read_data_file` must return pd.DataFrame"
 
         for col in self.ensure_numerical_cols:
-            assert col in df.columns, f"""ensure_numerical_cols: {
-                col} not in data columns"""
+            assert col in df.columns, f"""ensure_numerical_cols: `{
+                col}` not in data columns"""
             try:
                 df[col] = pd.to_numeric(df[col], errors='raise')
             except ValueError as e:
@@ -95,8 +95,8 @@ class DataReader(metaclass=ReaderMeta):
                     f"""Failed to apply `pd.to_numeric` on column [{col}]: {e}""")
 
         for col in self.ensure_categorical_cols:
-            assert col in df.columns, f"""ensure_categorical_cols: {
-                col} not in data columns"""
+            assert col in df.columns, f"""ensure_categorical_cols: `{
+                col}` not in data columns"""
             try:
                 df[col] = df[col].astype(str)
             except ValueError as e:
