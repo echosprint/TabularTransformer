@@ -271,8 +271,13 @@ class Trainer:
                         mfu = self._estimate_mfu(
                             self.tp.batch_size * self.hp.gradient_accumulation_steps, dt)
                         running_mfu = mfu if running_mfu == -1.0 else 0.9 * running_mfu + 0.1 * mfu
+
+                    lr_str = f"lr {list(current_lr.values())[0]:e}" \
+                        if len(set(current_lr.values())) == 1 \
+                        else f"lr/t {current_lr['lr/transformer']:e} | lr/o {current_lr['lr/output']:e}"
+
                     print(
-                        f"{iter_num} | loss {lossf:.4f} | lr {lr:e} |"
+                        f"{iter_num} | loss {lossf:.4f} | {lr_str} |"
                         f"{dt*1000: .2f}ms | mfu {running_mfu*100: .2f}%"
                     )
                 iter_num += 1
