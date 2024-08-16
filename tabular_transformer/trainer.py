@@ -49,6 +49,7 @@ class Trainer:
     feature_type: Dict[str, FeatureType]
     feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]]
     target_map: Dict[str, int]
+    target_stats: NumericalStats
     task_type: TaskType
     feature_vocab_size: int
     max_seq_len: int
@@ -320,6 +321,7 @@ class Trainer:
                          'feature_vocab_size': self.feature_vocab_size,
                          'max_seq_len': self.max_seq_len,
                          'target_map': self.target_map,
+                         'target_stats': self.target_stats,
                          'task_type': self.task_type,
                          }
         }
@@ -402,6 +404,9 @@ class Trainer:
         self.tokenizer = Tokenizer(self.feature_vocab, self.feature_type)
         self.target_map = self.dataset.target_map if self.dataset.target_map is not None else {}
         self.task_type = self.dataset.task_type
+        self.target_stats = NumericalStats(*([0.]*6)) \
+            if self.task_type is not TaskType.REGRESSION \
+            else next(iter(self.dataset.stats_y[0].values()))
 
         assert self.task_type is not TaskType.BINCLASS or \
             self.loss_type in ('BINCE', 'SUPCON'), \
@@ -433,6 +438,7 @@ class Trainer:
             feature_stats=self.feature_stats,
             tokenizer=self.tokenizer,
             target_map=self.target_map,
+            target_stats=self.target_stats,
             task_type=self.task_type,
             apply_power_transform=self.ts.apply_power_transform,
             remove_outlier=self.ts.remove_outlier,
