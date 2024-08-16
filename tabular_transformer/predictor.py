@@ -3,15 +3,16 @@ from typing import Literal, Optional
 import torch
 import pandas as pd
 from .data_common import DataReader
-from .preprocessor import preprocess
+from .preprocessor import normalize_data, power_transform, preprocess
 from .tabular_transformer import ModelArgs, TabularTransformer
 from .tokenizer import Tokenizer
 from .dataloader import load_data
 import random
-from .util import LossType
+from .util import LossType, TaskType
 import numpy as np
-from .metrics import calAUC
+from .metrics import calAUC, calAccuracy, calF1Macro, calMAPE, calRMSE
 from pathlib import Path
+import torch.nn.functional as F
 
 
 class Predictor:
@@ -32,7 +33,7 @@ class Predictor:
     def predict(self,
                 data_reader: DataReader,
                 has_truth: bool = True,
-                batch_size: int = 128,
+                batch_size: int = 1024,
                 save_as: Optional[str | Path] = None,
                 seed: int = 1337):
 
@@ -55,8 +56,9 @@ class Predictor:
 
         self._predict()
 
-        if self.truth_y is not None:
-            self._cal_loss(self.logits_array)
+        self._post_process()
+        # if self.truth_y is not None:
+        #     self._cal_loss(self.logits_array)
 
         if self.save_as is not None:
             self._save_output()
@@ -81,6 +83,10 @@ class Predictor:
 
         self.ctx = nullcontext() if self.device_type == 'cpu' else torch.amp.autocast(
             device_type=self.device_type, dtype=ptdtype)
+
+        self.p_prob = []
+        self.p_pred = []
+        self.p_loss = []
 
     def _load_checkpoint(self):
         # init from a model saved in a specific directory
@@ -111,12 +117,13 @@ class Predictor:
         self.enc = Tokenizer(self.dataset_attr['feature_vocab'],
                              self.dataset_attr['feature_type'])
 
-        loss_type = self.model_args.loss_type
-        assert LossType[loss_type] is LossType.BINCE, \
-            "only support binary cross entropy loss"
+        self.loss_type = LossType[self.model_args.loss_type]
+        assert self.loss_type is not LossType.SUPCON, \
+            "model trained with `SUPCON` loss cannnot be used to predict"
 
         self.target_map = self.dataset_attr['target_map']
-        assert self.target_map is not None
+        self.target_stats = self.dataset_attr['target_stats']
+        self.task_type = self.dataset_attr['task_type']
 
         self.predict_map = {v: k for k, v in self.target_map.items()}
 
@@ -129,9 +136,8 @@ class Predictor:
         else:
             self.dataset_x = predict_dataframe
             self.truth_y = None
-        assert self.dataset_x.shape[1] == self.dataset_attr['max_seq_len']
 
-        self.accuracy_accum = {"n_samples": 0, "right": 0}
+        assert self.dataset_x.shape[1] == self.dataset_attr['max_seq_len']
 
     def _predict(self):
 
@@ -164,59 +170,135 @@ class Predictor:
                         self.device, non_blocking=True)
                     feature_weight = tok_x[1].to(
                         self.device, non_blocking=True)
-                    logits = self.model.predict(
-                        (feature_tokens, feature_weight))
-                    logits_y = logits.squeeze(-1) \
-                        .to('cpu', dtype=torch.float32).numpy()
 
-                    self.logits_array[start: end] = logits_y
+                    truth_tok = self._preprocess_target(truth) \
+                        if truth is not None else None
 
-                    self.accum_accuracy(logits_y, truth.to_numpy()
-                                        if truth is not None else None)
-        self.predict_result_array = self.get_results(self.logits_array)
+                    logits, loss = self.model.predict(
+                        (feature_tokens, feature_weight), truth_tok)
+
+                    if loss is not None:
+                        self.p_loss.append(loss.item())
+
+                    if self.loss_type is LossType.BINCE:
+                        bin_prob = torch.sigmoid(logits).squeeze(-1)
+                        bin_predict = (bin_prob >= 0.5).long()
+
+                        self.p_prob.append(bin_prob.to(
+                            'cpu', dtype=torch.float32) .numpy())
+                        self.p_pred.append(bin_predict.to('cpu').numpy())
+
+                    elif self.loss_type is LossType.MULCE:
+                        mul_prob = F.softmax(logits, dim=1)
+                        mul_predict = torch.argmax(mul_prob, dim=1)
+
+                        self.p_prob.append(mul_prob.to(
+                            'cpu', dtype=torch.float32).numpy())
+                        self.p_pred.append(mul_predict.to('cpu').numpy())
+
+                    elif self.loss_type is LossType.MSE:
+                        u_logits = logits * self.target_stats.logstd + self.target_stats.logmean
+                        reg_predict = torch.where(u_logits > 0,
+                                                  torch.expm1(u_logits), -torch.expm1(-u_logits))
+
+                        self.p_pred.append(reg_predict.to(
+                            'cpu', dtype=torch.float32).numpy())
+
+    def _post_process(self):
+
+        self.predict_results = np.concatenate(self.p_pred, axis=0)
+
+        self.predict_results_output = pd.DataFrame(
+            self.predict_results,
+            columns=['prediction_outputs']
+        )
+
+        if self.task_type is not TaskType.REGRESSION:
+            self.probs = np.concatenate(self.p_prob, axis=0)
+            self.predict_results_output['prediction_outputs'] = \
+                self.predict_results_output['prediction_outputs'].apply(
+                    lambda x: self.predict_map[x])
+
+        else:
+            self.probs = None
+
+        if self.has_truth:
+
+            self.losses = np.array(self.p_loss).mean()
+
+            if self.task_type is TaskType.BINCLASS:
+                self._process_bin()
+            elif self.task_type is TaskType.MULTICLASS:
+                self._process_mul()
+            elif self.task_type is TaskType.REGRESSION:
+                self._process_mse()
+            else:
+                raise ValueError(f"bad task_type: {self.task_type}")
+
+    def _process_bin(self):
+
+        truth_y = self.truth_y.map(
+            lambda x: self.target_map[x]).to_numpy()
+
+        bce_loss = self.losses
+        print(f"binary cross entropy loss: {bce_loss:.4f}")
+
+        auc_score = calAUC(truth_y, self.probs)
+        print(f"auc score: {auc_score:.4f}")
+
+        f1_score = calF1Macro(truth_y, self.predict_results)
+        print(f"f1 macro score: {f1_score:.4f}")
+
+        accuracy = calAccuracy(truth_y, self.predict_results)
+        print(f"samples: {len(truth_y)}, "
+              f"accuracy: {accuracy:.4f}")
+
+    def _process_mul(self):
+        truth_y = self.truth_y.map(
+            lambda x: self.target_map[x]).to_numpy()
+
+        ce_loss = self.losses
+        print(f"cross entropy loss: {ce_loss:.4f}")
+
+        auc_score = calAUC(truth_y, self.probs)
+        print(f"auc score: {auc_score:.4f}")
+
+        f1_score = calF1Macro(truth_y, self.predict_results)
+        print(f"f1 macro score: {f1_score:.4f}")
+
+        accuracy = calAccuracy(truth_y, self.predict_results)
+        print(f"samples: {len(truth_y)}, "
+              f"accuracy: {accuracy:.4f}")
+
+    def _process_mse(self):
+        truth_y = self.truth_y.to_numpy()
+
+        log_mse_loss = self.losses
+        print(f"mse loss of normalized log1p(y): {log_mse_loss:.4f}")
+
+        mape = calMAPE(truth_y, self.predict_results)
+        print(f"mean absolute percentage error: {mape:.4f}")
+
+        rmse = calRMSE(truth_y, self.predict_results)
+        print(f"root mean square error: {rmse:.4f}")
+
+    def _preprocess_target(self, truth):
+        if self.task_type is TaskType.REGRESSION:
+            truth_tok = truth.map(lambda x: normalize_data(
+                power_transform(x),
+                self.target_stats.logmean,
+                self.target_stats.logstd))
+            target_dtype = torch.float32
+        else:
+            truth_tok = truth.map(lambda x: self.target_map[x])
+            target_dtype = torch.long
+        truth_tok_tensor = torch.tensor(
+            truth_tok.to_numpy(), dtype=target_dtype).squeeze()
+        return truth_tok_tensor.to(self.device, non_blocking=True)
 
     def _save_output(self):
-        df = pd.DataFrame(self.predict_result_array,
-                          columns=['prediction_outputs'])
         output_dir = Path(self.train_config['out_dir'])
         output_dir.mkdir(parents=True, exist_ok=True)
         filepath = output_dir / self.save_as
-        df.to_csv(filepath, index=False)
+        self.predict_results_output.to_csv(filepath, index=False)
         print(f"save prediction output to file: {filepath}")
-
-    def sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
-
-    def get_results(self, logits_arr):
-        prob_y = self.sigmoid(logits_arr)
-        result_val = np.where(prob_y > 0.5, 1, 0)
-        result_cls = np.vectorize(self.predict_map.get)(result_val)
-        return result_cls
-
-    def accum_accuracy(self, logits, truth=None):
-        if truth is None:
-            return
-        assert len(logits) == len(truth)
-        result_cls = self.get_results(logits)
-        equal_elements = np.sum(np.equal(result_cls, truth))
-        self.accuracy_accum['n_samples'] += len(logits)
-        self.accuracy_accum['right'] += equal_elements
-
-    def binary_cross_entropy_loss(self, logits, targets=None):
-        # Apply sigmoid to logits
-        probs = self.sigmoid(logits)
-        targets = np.vectorize(self.target_map.get)(targets)
-        # Compute binary cross-entropy loss
-        loss = - (targets * np.log(probs) +
-                  (1 - targets) * np.log(1 - probs))
-        # Return the mean loss
-        return np.mean(loss)
-
-    def _cal_loss(self, logits_array):
-        bce_loss = self.binary_cross_entropy_loss(
-            logits_array, self.truth_y.to_numpy())
-        print(f"binary cross entropy loss: {bce_loss:.4f}")
-        auc_score = calAUC(self.truth_y.to_numpy(), logits_array)
-        print(f"auc score: {auc_score}")
-        print(f"samples: {self.accuracy_accum['n_samples']}, "
-              f"accuracy: {self.accuracy_accum['right'] / self.accuracy_accum['n_samples']:.2f}")
