@@ -1,12 +1,14 @@
+import numpy as np
+from .data_common import DataReader, download
+from .util import FeatureType, TaskType, CATEGORICAL_UNK
+from .tokenizer import Tokenizer
 import pandas as pd
 import torch
 import random
 from typing import Tuple, Callable, Union, Optional, Dict
-from .preprocessor import data_stats, generate_feature_vocab, preprocess, CategoricalStats, NumericalStats
-from .tokenizer import Tokenizer
-from .util import FeatureType, TaskType, CATEGORICAL_UNK
-from .data_common import DataReader, download
-import numpy as np
+from .preprocessor import data_stats, generate_feature_vocab, \
+    preprocess, CategoricalStats, NumericalStats, \
+    power_transform, normalize_data
 
 
 def load_data(datafile: str) -> pd.DataFrame:
@@ -126,6 +128,7 @@ class TabularDataset(torch.utils.data.IterableDataset):
     feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]]
     tokenizer: Tokenizer
     target_map: Dict[str, int]
+    target_stats: NumericalStats
     task_type: TaskType
     seed: Optional[int]
 
@@ -137,6 +140,7 @@ class TabularDataset(torch.utils.data.IterableDataset):
                  feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]],
                  tokenizer: Tokenizer,
                  target_map: Dict[str, int],
+                 target_stats: NumericalStats,
                  task_type: TaskType,
                  apply_power_transform=True,
                  remove_outlier=False,
@@ -158,6 +162,7 @@ class TabularDataset(torch.utils.data.IterableDataset):
         self.feature_stats = feature_stats
         self.tokenizer = tokenizer
         self.target_map = target_map
+        self.target_stats = target_stats
         self.task_type = task_type
 
         self.split = split
@@ -174,7 +179,9 @@ class TabularDataset(torch.utils.data.IterableDataset):
         num_batches = dataset_size // self.batch_size
 
         assert dataset_size > 0, "dataset is empty"
-        assert self.batch_size <= dataset_size, "the batch size is too large for the dataset"
+        assert self.batch_size <= dataset_size, \
+            f"""the batch size is too large for the dataset, batch_size: {
+                self.batch_size}, dataset_size: {dataset_size}"""
 
         ixs = list(range(dataset_size))
         self.rng.shuffle(ixs)
@@ -198,10 +205,16 @@ class TabularDataset(torch.utils.data.IterableDataset):
                             )
 
             x_tok = self.tokenizer.encode(xp)
-            y_tok = y if self.target_map is None else y.map(
-                lambda x: self.target_map[x])
 
-            target_dtype = torch.float32 if self.task_type == TaskType.REGRESSION else torch.long
+            if self.task_type == TaskType.REGRESSION:
+                y_tok = y.map(lambda x: normalize_data(
+                    power_transform(x),
+                    self.target_stats.logmean,
+                    self.target_stats.logstd))
+                target_dtype = torch.float32
+            else:
+                y_tok = y.map(lambda x: self.target_map[x])
+                target_dtype = torch.long
 
             yield x_tok, torch.tensor(y_tok.to_numpy(), dtype=target_dtype).squeeze()
 
