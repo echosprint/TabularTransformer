@@ -285,6 +285,6 @@ class TabularTransformer(nn.Module):
         return logits
 
     @torch.inference_mode()
-    def predict(self, features: Tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
-        logits: torch.Tensor = self(features)
-        return logits
+    def predict(self, features: Tuple[torch.Tensor, torch.Tensor], targets: Optional[torch.Tensor] = None) -> torch.Tensor:
+        logits: torch.Tensor = self(features, targets)
+        return logits, self.last_loss
