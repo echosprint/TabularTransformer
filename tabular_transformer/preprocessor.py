@@ -36,6 +36,10 @@ def power_transform(value):
     return -np.log1p(-value) if value < 0 else np.log1p(value)
 
 
+def inverse_power_transform(value):
+    return -np.expm1(-value) if value < 0 else np.expm1(value)
+
+
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
@@ -50,6 +54,10 @@ def normalize_data(value, mean, std):
     # value = sigmoid(value) * 2
     # value = sigmoid(value)
     return value
+
+
+def inverse_normalize_data(value, mean, std):
+    return value * (std + 1e-8) + mean
 
 
 def remove_outliers(value, mean, std, n_sigma=4) -> np.number:
