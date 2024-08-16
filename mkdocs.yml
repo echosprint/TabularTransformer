@@ -22,6 +22,7 @@ nav:
     - Installation: getting-started.md
     - income analysis: income_analysis.md
   - HyperParameters: hyperparameters.md
+  - Embedding: embedding.md
 # [Extensions]
 plugins:
   - search:
