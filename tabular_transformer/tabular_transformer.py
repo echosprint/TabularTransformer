@@ -6,9 +6,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import nn
-from .util import LossType
-from .losses import SupConLoss
-from .hyperparameters import ModelArgs
+from tabular_transformer.util import LossType
+from tabular_transformer.losses import SupConLoss
+from tabular_transformer.hyperparameters import ModelArgs
 
 
 class RMSNorm(torch.nn.Module):

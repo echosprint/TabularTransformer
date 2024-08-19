@@ -3,7 +3,7 @@ import numpy as np
 from pandas.api.types import is_numeric_dtype
 from dataclasses import dataclass
 from typing import Dict, Union, Optional
-from .util import FeatureType, CATEGORICAL_UNK, SCALAR_NUMERIC, SCALAR_UNK
+from tabular_transformer.util import FeatureType, CATEGORICAL_UNK, SCALAR_NUMERIC, SCALAR_UNK
 from random import Random
 
 

@@ -2,15 +2,15 @@ from contextlib import nullcontext
 from typing import Literal, Optional
 import torch
 import pandas as pd
-from .data_common import DataReader
-from .preprocessor import normalize_data, power_transform, preprocess
-from .tabular_transformer import ModelArgs, TabularTransformer
-from .tokenizer import Tokenizer
-from .dataloader import load_data
+from tabular_transformer.data_common import DataReader
+from tabular_transformer.preprocessor import normalize_data, power_transform, preprocess
+from tabular_transformer.tabular_transformer import ModelArgs, TabularTransformer
+from tabular_transformer.tokenizer import Tokenizer
+from tabular_transformer.dataloader import load_data
 import random
-from .util import LossType, TaskType
+from tabular_transformer.util import LossType, TaskType
 import numpy as np
-from .metrics import calAUC, calAccuracy, calF1Macro, calMAPE, calRMSE
+from tabular_transformer.metrics import calAUC, calAccuracy, calF1Macro, calMAPE, calRMSE
 from pathlib import Path
 import torch.nn.functional as F
 

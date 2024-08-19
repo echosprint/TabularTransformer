@@ -1,12 +1,12 @@
 import numpy as np
-from .data_common import DataReader, download
-from .util import FeatureType, TaskType, CATEGORICAL_UNK
-from .tokenizer import Tokenizer
+from tabular_transformer.data_common import DataReader, download
+from tabular_transformer.util import FeatureType, TaskType, CATEGORICAL_UNK
+from tabular_transformer.tokenizer import Tokenizer
 import pandas as pd
 import torch
 import random
 from typing import Tuple, Callable, Union, Optional, Dict
-from .preprocessor import data_stats, generate_feature_vocab, \
+from tabular_transformer.preprocessor import data_stats, generate_feature_vocab, \
     preprocess, CategoricalStats, NumericalStats, \
     power_transform, normalize_data
 

@@ -3,7 +3,7 @@ import torch
 from typing import Optional, Tuple, Dict, List
 import numpy as np
 import pandas as pd
-from .util import FeatureType, SCALAR_NUMERIC, SCALAR_UNK, CATEGORICAL_UNK
+from tabular_transformer.util import FeatureType, SCALAR_NUMERIC, SCALAR_UNK, CATEGORICAL_UNK
 
 
 class Tokenizer():

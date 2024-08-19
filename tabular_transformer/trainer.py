@@ -6,13 +6,13 @@ import os
 import random
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
-from .preprocessor import CategoricalStats, NumericalStats
-from .util import FeatureType, LossType, TaskType, equals_except
-from .tabular_transformer import TabularTransformer
-from .tokenizer import Tokenizer
-from .dataloader import RawDataset, Task
-from .hyperparameters import HyperParameters, TrainParameters, TrainSettings, ModelArgs
-from .data_common import DataReader
+from tabular_transformer.preprocessor import CategoricalStats, NumericalStats
+from tabular_transformer.util import FeatureType, LossType, TaskType, equals_except
+from tabular_transformer.tabular_transformer import TabularTransformer
+from tabular_transformer.tokenizer import Tokenizer
+from tabular_transformer.dataloader import RawDataset, Task
+from tabular_transformer.hyperparameters import HyperParameters, TrainParameters, TrainSettings, ModelArgs
+from tabular_transformer.data_common import DataReader
 import torch
 import inspect
 import copy

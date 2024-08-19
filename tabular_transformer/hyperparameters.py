@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field, fields, asdict
 from typing import Dict, Literal, Optional, get_type_hints
 from datetime import datetime
-from .data_common import DataclassTool
+from tabular_transformer.data_common import DataclassTool
 
 
 @dataclass
