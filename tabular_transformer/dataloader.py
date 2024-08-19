@@ -25,6 +25,7 @@ class RawDataset():
     task_type: TaskType
     target_map: Optional[Dict[str, int]]
     n_validate: int
+    n_class: int
 
     def __init__(self,
                  datareader: DataReader,
@@ -88,13 +89,16 @@ class RawDataset():
         target_stats = list(self.stats_y[0].values())[0]
         if isinstance(target_stats, CategoricalStats):
             if len(target_stats.valid_cats) == 2:
+                self.n_class = 1
                 self.task_type = TaskType.BINCLASS
             elif len(target_stats.valid_cats) > 2:
+                self.n_class = len(target_stats.valid_cats)
                 self.task_type = TaskType.MULTICLASS
 
             self.target_map = {key: index for index,
                                key in enumerate(target_stats.valid_cats.keys())}
         else:
+            self.n_class = 1
             self.task_type = TaskType.REGRESSION
             self.target_map = None
         return self.task_type

@@ -7,7 +7,7 @@ import random
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
 from .preprocessor import CategoricalStats, NumericalStats
-from .util import FeatureType, TaskType, equals_except
+from .util import FeatureType, LossType, TaskType, equals_except
 from .tabular_transformer import TabularTransformer
 from .tokenizer import Tokenizer
 from .dataloader import RawDataset, Task
@@ -419,6 +419,11 @@ class Trainer:
         assert self.task_type is not TaskType.REGRESSION or \
             self.loss_type in ('MSE',), \
             "only MSE loss could be used for regression task"
+
+        assert self.loss_type is LossType.SUPCON or \
+            self.dataset.n_class == self.tp.output_dim,  \
+            f"dataset target has `n_class` {self.dataset.n_class}, " \
+            f"but given `output_dim` {self.tp.output_dim}"
 
         assert all(k in self.feature_type for k in self.tp.unk_ratio), \
             "column specified in `unk_ratio` not exists in the dataset"
