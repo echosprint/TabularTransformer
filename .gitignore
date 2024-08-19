@@ -1,10 +1,14 @@
 data/
 out/
 dataset/
+notebooks/data/
+notebooks/out/
+notebooks/dataset/
 wandb/
 __pycache__/
 tabular_transformer/__pycache__/
 .ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
 log/
 tabular_transformer.egg-info/
 
