@@ -106,6 +106,14 @@ def prepare_fish_dataset():
     return fish_path
 
 
+def prepare_iris_dataset():
+    website = "https://huggingface.co/datasets/scikit-learn/iris"
+    data_url = "hf://datasets/scikit-learn/iris/Iris.csv"
+    fname = "iris.csv"
+    iris_path = prepare_dataset(data_url, fname, website)
+    return iris_path
+
+
 def prepare_dataset(data_url, fname, website):
     warnings.filterwarnings('ignore', category=UserWarning)
 
