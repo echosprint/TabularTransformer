@@ -2,8 +2,11 @@ import numpy as np
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error, mean_absolute_error, f1_score, roc_auc_score
 
 
-def calAUC(y_true, y_pred):
-    return roc_auc_score(y_true, y_pred)
+def calAUC(y_true, y_pred, multi_class=False):
+    if not multi_class:
+        return roc_auc_score(y_true, y_pred)
+    else:
+        return roc_auc_score(y_true, y_pred, multi_class='ovr')
 
 
 def calF1Macro(y_true, y_pred):
