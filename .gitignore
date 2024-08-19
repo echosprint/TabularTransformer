@@ -6,6 +6,7 @@ __pycache__/
 tabular_transformer/__pycache__/
 .ipynb_checkpoints/
 log/
+tabular_transformer.egg-info/
 
 # dot files and such
 .vscode
