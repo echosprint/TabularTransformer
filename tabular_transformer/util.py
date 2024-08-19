@@ -2,6 +2,7 @@ from enum import Enum
 import pandas as pd
 import warnings
 import os
+import requests
 
 
 class TaskType(Enum):
@@ -123,3 +124,49 @@ def prepare_dataset(data_url, fname, website):
         print(f"{full_path} already exists, skipping download.")
     warnings.filterwarnings('default', category=UserWarning)
     return full_path
+
+
+def download_files_from_github(repo, folder_path, local_dir):
+    # Create the local directory if it doesn't exist
+    if not os.path.exists(local_dir):
+        os.makedirs(local_dir)
+
+    # Construct the GitHub API URL
+    api_url = f"https://api.github.com/repos/{repo}/contents/{folder_path}"
+    response = requests.get(api_url)
+    response.raise_for_status()
+
+    # Get the content of the folder
+    files = response.json()
+
+    for file in files:
+        if file['type'] == 'file':
+            download_url = file['download_url']
+            file_name = file['name']
+            local_file_path = os.path.join(local_dir, file_name)
+
+            # Download the file
+            print(f"Downloading {file_name}...")
+            file_response = requests.get(download_url)
+            file_response.raise_for_status()
+
+            # Save the file locally
+            with open(local_file_path, 'wb') as local_file:
+                local_file.write(file_response.content)
+
+            print(f"Saved {file_name} to {local_file_path}")
+
+        elif file['type'] == 'dir':
+            # Recursively download files in subdirectories
+            download_files_from_github(
+                repo, f"{folder_path}/{file['name']}", f"{local_dir}/{file['name']}")
+
+
+def download_notebooks():
+
+    repo = "echosprint/TabularTransformer"
+    folder_path = "notebooks/"  # Replace with the folder path in the repo
+    # Replace with the desired local directory to save files
+    local_dir = "./notebooks/"
+
+    download_files_from_github(repo, folder_path, local_dir)

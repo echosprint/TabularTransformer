@@ -3,5 +3,5 @@ from .tabular_transformer import TabularTransformer
 from .dataloader import Task
 from .data_common import DataReader
 from .trainer import Trainer
-from .util import prepare_income_dataset, prepare_fish_dataset
+from .util import prepare_income_dataset, prepare_fish_dataset, download_notebooks
 from .predictor import Predictor
