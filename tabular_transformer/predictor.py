@@ -197,7 +197,7 @@ class Predictor:
                         self.p_pred.append(mul_predict.to('cpu').numpy())
 
                     elif self.loss_type is LossType.MSE:
-                        u_logits = logits * self.target_stats.logstd + self.target_stats.logmean
+                        u_logits = logits.float() * self.target_stats.logstd + self.target_stats.logmean
                         reg_predict = torch.where(u_logits > 0,
                                                   torch.expm1(u_logits), -torch.expm1(-u_logits))
 
@@ -260,8 +260,11 @@ class Predictor:
         ce_loss = self.losses
         print(f"cross entropy loss: {ce_loss:.4f}")
 
-        auc_score = calAUC(truth_y, self.probs)
-        print(f"auc score: {auc_score:.4f}")
+        try:
+            auc_score = calAUC(truth_y, self.probs, multi_class=True)
+            print(f"auc score: {auc_score:.4f}")
+        except ValueError as e:
+            print(f"skip cal AUC score due to error: {e}")
 
         f1_score = calF1Macro(truth_y, self.predict_results)
         print(f"f1 macro score: {f1_score:.4f}")
