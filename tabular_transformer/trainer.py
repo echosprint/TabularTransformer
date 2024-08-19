@@ -420,7 +420,7 @@ class Trainer:
             self.loss_type in ('MSE',), \
             "only MSE loss could be used for regression task"
 
-        assert self.loss_type is LossType.SUPCON or \
+        assert LossType[self.loss_type] is LossType.SUPCON or \
             self.dataset.n_class == self.tp.output_dim,  \
             f"dataset target has `n_class` {self.dataset.n_class}, " \
             f"but given `output_dim` {self.tp.output_dim}"
