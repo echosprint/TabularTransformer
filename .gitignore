@@ -21,3 +21,5 @@ tabular_transformer.egg-info/
 
 onlytest.ipynb
 onlytest.py
+notebooks/onlytest.ipynb
+notebooks/onlytest.py
