@@ -132,10 +132,11 @@ class DataReader(metaclass=ReaderMeta):
 
             part_path = file_path.with_name(f"{file_path.stem}_{sp}.csv")
             if part_path.exists():
-                print(f"{part_path} *already exists*, skip save split `{sp}`")
-            else:
-                print(f"save split `{sp}` at path: {part_path}")
-                data_part.to_csv(part_path, index=False)
+                os.remove(part_path)
+                print(f"{part_path} *exists*, delete old split `{sp}`")
+
+            print(f"save split `{sp}` at path: {part_path}")
+            data_part.to_csv(part_path, index=False)
             fpath[f'{sp}'] = part_path
             start = end
         return fpath
