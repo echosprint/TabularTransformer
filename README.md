@@ -24,7 +24,7 @@ $ pip install tabular-transformer
 
 ### Usage
 
-here we use [Adult Income dataset](https://huggingface.co/datasets/scikit-learn/adult-census-income) as an example to show the usage of `tabular_transformer` package 
+Here we use [Adult Income dataset](https://huggingface.co/datasets/scikit-learn/adult-census-income) as an example to show the usage of `tabular_transformer` package 
 
  <a target="_blank" href="https://colab.research.google.com/github/echosprint/TabularTransformer/blob/main/notebooks/supervised_training.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
