@@ -57,8 +57,6 @@ class Predictor:
         self._predict()
 
         self._post_process()
-        # if self.truth_y is not None:
-        #     self._cal_loss(self.logits_array)
 
         if self.save_as is not None:
             self._save_output()
@@ -137,7 +135,9 @@ class Predictor:
             self.dataset_x = predict_dataframe
             self.truth_y = None
 
-        assert self.dataset_x.shape[1] == self.dataset_attr['max_seq_len']
+        assert self.dataset_x.shape[1] == self.dataset_attr['max_seq_len'], \
+            "dataset for prediction not compatible with trained model, " \
+            "maybe you forgot to set `has_truth` = False when call `predict` function"
 
     def _predict(self):
 
@@ -218,7 +218,6 @@ class Predictor:
             self.predict_results_output['prediction_outputs'] = \
                 self.predict_results_output['prediction_outputs'].apply(
                     lambda x: self.predict_map[x])
-
         else:
             self.probs = None
 
