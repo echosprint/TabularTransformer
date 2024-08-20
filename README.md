@@ -99,3 +99,8 @@ License
 -------
 
 This project is licensed under the terms of the MIT license. See [LICENSE](https://github.com/echosprint/TabularTransformer/blob/main/LICENSE) for additional details.
+
+Thanks
+-------
+
+The prototype of this project is adapted from python parts of [Andrej Karpathy](https://x.com/karpathy)'s [Llama2.c](https://github.com/karpathy/llama2.c), Andrej is a mentor, wish him great success with his startup.
