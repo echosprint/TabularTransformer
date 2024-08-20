@@ -5,11 +5,11 @@ setup(
     packages=find_packages(),
     version='0.1.0',
     license='MIT',
-    description='Transformer model adapted for tabular data',
+    description='Transformer adapted for tabular data domain',
     long_description_content_type='text/markdown',
     author='Qiao Qian',
     author_email='qiaoqianda@gmail.com',
-    url='https://github.com/huoyushequ/TabularTransformer',
+    url='https://github.com/echosprint/TabularTransformer',
     keywords=[
         'artificial intelligence',
         'transformers',
