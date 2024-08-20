@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 setup(
     name='tabular-transformer',
     packages=find_packages(),
-    version='0.1.1',
+    version='0.1.2',
     license='MIT',
     description='Transformer adapted for tabular data domain',
     long_description=long_description,
