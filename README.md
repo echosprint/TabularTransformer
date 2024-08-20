@@ -93,6 +93,7 @@ Xin Huang and Ashish Khetan and Milan Cvitkovic and Zohar Karnin. "[TabTransform
 
 Prannay Khosla and Piotr Teterwak and Chen Wang and Aaron Sarna and Yonglong Tian and Phillip Isola and Aaron Maschinot and Ce Liu and Dilip Krishnan. "[Supervised Contrastive Learning](https://arxiv.org/abs/2004.11362)". arXiv, 2020.
 
+Levin, Roman and Cherepanova, Valeriia and Schwarzschild, Avi and Bansal, Arpit and Bruss, C Bayan and Goldstein, Tom and Wilson, Andrew Gordon and Goldblum, Micah. "[Transfer Learning with Deep Tabular Models](https://arxiv.org/abs/2206.15306)". arXiv, 2022.
 
 License
 -------
