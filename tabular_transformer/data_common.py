@@ -2,7 +2,7 @@ from abc import ABC, ABCMeta, abstractmethod
 import random
 import pandas as pd
 from pathlib import Path
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 import sys
 from ast import literal_eval
 import requests
@@ -103,14 +103,15 @@ class DataReader(metaclass=ReaderMeta):
                 raise ValueError(
                     f"Failed to cast column [{col}] to string: {e}")
 
-    def split_data(self, split: Dict[str, float | int], seed: int = 1377) -> Dict[str, Path]:
+    def split_data(self, split: Dict[str, float | int], seed: Optional[int] = 1377) -> Dict[str, Path]:
         assert isinstance(split, dict), "`split` must be Dict[str, float|int]"
         file_path: Path = self.file_path
         data = self.read_data_file()
         data_size = len(data)
-        rng = random.Random(seed)
         ixs = list(range(data_size))
-        rng.shuffle(ixs)
+        if seed is not None:
+            rng = random.Random(seed)
+            rng.shuffle(ixs)
         start = 0
         fpath = {}
         for sp, ratio in sorted(split.items(), key=lambda kv: -kv[1]):
