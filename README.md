@@ -79,6 +79,22 @@ predictor.predict(
     save_as="prediction_income.csv"
 )
 ```
+Comparison
+----------
+
+We used [Higgs](https://archive.ics.uci.edu/dataset/280/higgs) dataset to conduct our comparison experiment. Details of data are listed in the following tables:
+
+| Training Samples | Features | Test Set Description                 | Task                  |
+|------------------|----------|--------------------------------------|-----------------------|
+| 10,500,000       | 28       | Last 500,000 samples as the test set | Binary classification |
+
+
+We computed accuracy metric only on the test data set. check [benchmark source](https://github.com/microsoft/LightGBM/blob/master/docs/Experiments.rst#accuracy).
+| Data  | Metric | XGBoost | XGBoost_Hist | LightGBM       | TabularTransformer |
+|-------|--------|---------|--------------|----------------|--------------------|
+| Higgs | AUC    | 0.839593| 0.845314     | 0.845724       | **0.845724**       |
+
+To reproduce the result, please check the [source code](https://github.com/echosprint/TabularTransformer/blob/main/notebooks/higgs_classification.ipynb)
 
 Support
 -------
