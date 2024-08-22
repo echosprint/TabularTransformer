@@ -103,9 +103,22 @@ class DataReader(metaclass=ReaderMeta):
                 raise ValueError(
                     f"Failed to cast column [{col}] to string: {e}")
 
-    def split_data(self, split: Dict[str, float | int], seed: Optional[int] = 1377) -> Dict[str, Path]:
+    def split_data(self, split: Dict[str, float | int],
+                   seed: Optional[int] = 1377,
+                   override: bool = True,
+                   compression: bool = False) -> Dict[str, Path]:
         assert isinstance(split, dict), "`split` must be Dict[str, float|int]"
         file_path: Path = self.file_path
+        base_stem = file_path.stem.split('.')[0]
+        suffix = '.csv' if not compression else '.csv.gz'
+        if all(file_path.with_name(f"{base_stem}_{sp}{suffix}").exists()
+               for sp in split.keys()) \
+                and not override:
+            print("splits already exists, skip split.")
+            return {f'{sp}': file_path.with_name(f"{base_stem}_{sp}{suffix}")
+                    for sp in split.keys()}
+
+        print('read data set...')
         data = self.read_data_file()
         data_size = len(data)
         ixs = list(range(data_size))
@@ -131,13 +144,18 @@ class DataReader(metaclass=ReaderMeta):
             data_part = data.iloc[ixs[start: end]]
             print(f'split: {sp}, n_samples: {part_len}')
 
-            part_path = file_path.with_name(f"{file_path.stem}_{sp}.csv")
-            if part_path.exists():
+            part_path = file_path.with_name(f"{base_stem}_{sp}{suffix}")
+
+            if part_path.exists() and override:
                 os.remove(part_path)
                 print(f"{part_path} *exists*, delete old split `{sp}`")
 
-            print(f"save split `{sp}` at path: {part_path}")
-            data_part.to_csv(part_path, index=False)
+            if not part_path.exists():
+                print(f"save split `{sp}` at path: {part_path}")
+                data_part.to_csv(part_path, index=False)
+            else:
+                print(f"{part_path} *exists*, skip split `{sp}`")
+
             fpath[f'{sp}'] = part_path
             start = end
         return fpath
