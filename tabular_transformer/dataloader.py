@@ -190,15 +190,12 @@ class TabularDataset(torch.utils.data.IterableDataset):
         ixs = np.arange(dataset_size)
         self.rng.shuffle(ixs)
 
-        dataset_x = self.dataset_x.iloc[ixs]
-        dataset_y = self.dataset_y.iloc[ixs]
-
         for n in range(num_batches):
             start = n * self.batch_size
             end = start + self.batch_size
 
-            x = dataset_x.iloc[start: end]
-            y = dataset_y.iloc[start: end]
+            x = self.dataset_x.iloc[ixs[start: end]]
+            y = self.dataset_y.iloc[ixs[start: end]]
 
             # preprocess the data
             xp = preprocess(self.rng,
