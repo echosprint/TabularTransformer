@@ -240,13 +240,13 @@ class Predictor:
             lambda x: self.target_map[x]).to_numpy()
 
         bce_loss = self.losses
-        print(f"binary cross entropy loss: {bce_loss:.4f}")
+        print(f"binary cross entropy loss: {bce_loss:.6f}")
 
         auc_score = calAUC(truth_y, self.probs)
-        print(f"auc score: {auc_score:.4f}")
+        print(f"auc score: {auc_score:.6f}")
 
         f1_score = calF1Macro(truth_y, self.predict_results)
-        print(f"f1 macro score: {f1_score:.4f}")
+        print(f"f1 macro score: {f1_score:.6f}")
 
         accuracy = calAccuracy(truth_y, self.predict_results)
         print(f"samples: {len(truth_y)}, "
@@ -257,16 +257,16 @@ class Predictor:
             lambda x: self.target_map[x]).to_numpy()
 
         ce_loss = self.losses
-        print(f"cross entropy loss: {ce_loss:.4f}")
+        print(f"cross entropy loss: {ce_loss:.6f}")
 
         try:
             auc_score = calAUC(truth_y, self.probs, multi_class=True)
-            print(f"auc score: {auc_score:.4f}")
+            print(f"auc score: {auc_score:.6f}")
         except ValueError as e:
             print(f"skip cal AUC score due to error: {e}")
 
         f1_score = calF1Macro(truth_y, self.predict_results)
-        print(f"f1 macro score: {f1_score:.4f}")
+        print(f"f1 macro score: {f1_score:.6f}")
 
         accuracy = calAccuracy(truth_y, self.predict_results)
         print(f"samples: {len(truth_y)}, "
@@ -276,7 +276,7 @@ class Predictor:
         truth_y = self.truth_y.to_numpy()
 
         log_mse_loss = self.losses
-        print(f"mse loss of normalized log1p(y): {log_mse_loss:.4f}")
+        print(f"mse loss of normalized log1p(y): {log_mse_loss:.6f}")
 
         mape = calMAPE(truth_y, self.predict_results)
         print(f"mean absolute percentage error: {mape:.4f}")
