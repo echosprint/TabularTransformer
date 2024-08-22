@@ -175,7 +175,7 @@ class TabularDataset(torch.utils.data.IterableDataset):
         self.dataset_x = self.raw_dataset.train_dataset_x if self.split == "train" else self.raw_dataset.validate_dataset_x
         self.dataset_y = self.raw_dataset.train_dataset_y if self.split == "train" else self.raw_dataset.validate_dataset_y
 
-        self.rng = random.Random(self.seed)
+        self.rng: np.random.Generator = np.random.default_rng(self.seed)
 
     def __iter__(self):
 
@@ -187,15 +187,18 @@ class TabularDataset(torch.utils.data.IterableDataset):
             f"""the batch size is too large for the dataset, batch_size: {
                 self.batch_size}, dataset_size: {dataset_size}"""
 
-        ixs = list(range(dataset_size))
+        ixs = np.arange(dataset_size)
         self.rng.shuffle(ixs)
+
+        dataset_x = self.dataset_x.iloc[ixs]
+        dataset_y = self.dataset_y.iloc[ixs]
 
         for n in range(num_batches):
             start = n * self.batch_size
             end = start + self.batch_size
 
-            x = self.dataset_x.iloc[ixs[start: end]]
-            y = self.dataset_y.iloc[ixs[start: end]]
+            x = dataset_x.iloc[start: end]
+            y = dataset_y.iloc[start: end]
 
             # preprocess the data
             xp = preprocess(self.rng,

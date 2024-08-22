@@ -125,7 +125,7 @@ def generate_feature_vocab(feature_stats) -> Dict[str, int]:
     return feature_vocab
 
 
-def random_mark_unk(rng: Random, data: pd.DataFrame,
+def random_mark_unk(rng: np.random.Generator, data: pd.DataFrame,
                     feature_type: Dict[str, FeatureType],
                     unk_ratio: Optional[Dict[str, float]] = None,
                     unk_ratio_default: Optional[float] = None,
@@ -147,8 +147,9 @@ def random_mark_unk(rng: Random, data: pd.DataFrame,
             else:
                 num_replacements = 1
         assert 0 < num_replacements < data_size
-        random_indices = rng.sample(
-            data.index.to_list(), k=num_replacements)
+
+        random_indices = rng.choice(
+            data.index, size=num_replacements, replace=False)
 
         if feature_type[col] is FeatureType.CATEGORICAL:
             data.loc[random_indices, col] = CATEGORICAL_UNK
@@ -181,7 +182,7 @@ def normalize_and_transform(data: pd.DataFrame,
                     x, col_stats.mean, col_stats.std))
 
 
-def preprocess(rng: Random,
+def preprocess(rng: np.random.Generator,
                data: pd.DataFrame,
                feature_type: Dict[str, FeatureType],
                feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]],
