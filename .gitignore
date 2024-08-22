@@ -4,6 +4,7 @@ dataset/
 notebooks/data/
 notebooks/out/
 notebooks/dataset/
+notebooks/wandb/
 wandb/
 __pycache__/
 tabular_transformer/__pycache__/
