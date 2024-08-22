@@ -1,4 +1,7 @@
 from enum import Enum
+import gzip
+import shutil
+import zipfile
 import pandas as pd
 import warnings
 import os
@@ -178,3 +181,59 @@ def download_notebooks():
     local_dir = "./notebooks/"
 
     download_files_from_github(repo, folder_path, local_dir)
+
+
+def prepare_higgs_dataset():
+    fname = 'higgs.csv.gz'
+    url = "https://archive.ics.uci.edu/static/public/280/higgs.zip"
+
+    data_cache_dir = os.path.join(os.getcwd(), 'data', fname.split('.')[0])
+    os.makedirs(data_cache_dir, exist_ok=True)
+    extracted_file_path = os.path.join(data_cache_dir, fname)
+
+    if os.path.exists(extracted_file_path):
+        print("higgs dataset exists, skip download and extraction.")
+        return extracted_file_path
+
+    zip_file_path = os.path.join(data_cache_dir, 'higgs.zip')
+
+    if not os.path.exists(zip_file_path):
+        print("Downloading the Higgs dataset...")
+        response = requests.get(url)
+        with open(zip_file_path, 'wb') as file:
+            file.write(response.content)
+        print("Download completed.")
+    else:
+        print("higgs zip file exists, skip downloading.")
+
+    print("Extracting the ZIP file...")
+    with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+        zip_ref.extractall(data_cache_dir)
+    print("ZIP extraction completed.")
+
+    # Find and extract the .gz file
+    csv_gz = False
+    for root, dirs, files in os.walk(data_cache_dir):
+        for file in files:
+            if file.endswith('.csv.gz'):
+                gz_file_path = os.path.join(root, file)
+                os.rename(gz_file_path, extracted_file_path)
+                csv_gz = True
+                break
+                # print(f"Extracting {gz_file_path}...")
+                # with gzip.open(gz_file_path, 'rb') as f_in:
+                #     with open(extracted_file_path, 'wb') as f_out:
+                #         shutil.copyfileobj(f_in, f_out)
+                # print(f"Extraction of {gz_file_path} completed.")
+
+                # # Optionally, remove the .gz file after extraction
+                # os.remove(gz_file_path)
+                # print(f"Removed {gz_file_path}.")
+
+        if csv_gz:
+            break
+    # Clean up the zip file
+    os.remove(zip_file_path)
+    print("Cleanup completed. Dataset is ready.")
+    print(f"Higgs dataset saved: {extracted_file_path}")
+    return extracted_file_path
