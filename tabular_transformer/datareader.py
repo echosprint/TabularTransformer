@@ -1,9 +1,164 @@
-from typing import Dict, List, Optional
-import numpy as np
-import pyarrow as pa
-import pyarrow.csv as csv
-import pyarrow.compute as pc
+from abc import ABCMeta, abstractmethod
+from pathlib import Path
+from typing import Dict, Optional, Union
+import random
+import pandas as pd
+import os
 import torch
+import pyarrow.compute as pc
+import pyarrow.csv as csv
+import pyarrow as pa
+import numpy as np
+from typing import Dict, List, Optional
+
+
+class ReaderMeta(ABCMeta):
+    def __new__(cls, name, bases, dct):
+        # Wrap the read_data_file method if it exists
+        original_read_data_file = dct.get('read_data_file')
+        if original_read_data_file:
+            def new_read_data_file(self, *args, **kwargs):
+                self.pre_read_data()
+                if not args and not kwargs:
+                    args = (getattr(self, 'file_path'),)
+                result = original_read_data_file(self, *args, **kwargs)
+                self.post_read_data(result)
+                return result
+            dct['read_data_file'] = new_read_data_file
+        return super().__new__(cls, name, bases, dct)
+
+    def __call__(cls, *args, **kwargs):
+        # Create a new instance of the class
+        instance = super().__call__()
+        assert not (len(args) == 0 and len(kwargs) == 0), f"""{
+            cls} need at least one argument for `file_path`."""
+        # Iterate over positional arguments and assign them to attributes
+        for i, arg in enumerate(args):
+            setattr(instance, f'arg{i}', arg)
+
+        # Iterate over keyword arguments and assign them to attributes
+        for key, value in kwargs.items():
+            setattr(instance, key, value)
+
+        if not hasattr(instance, 'file_path'):
+            if len(args) > 0:
+                setattr(instance, 'file_path', args[0])
+            else:
+                raise ValueError(f"""bad arguments for {
+                                 cls}, accept one positional argument or `file_path` keyword argument""")
+        instance.file_path = Path(instance.file_path)
+
+        return instance
+
+
+class DataReader(metaclass=ReaderMeta):
+    @abstractmethod
+    def read_data_file(self, file_path: Union[str, Path]) -> pd.DataFrame:
+        pass
+
+    @property
+    @abstractmethod
+    def ensure_categorical_cols(self):
+        pass
+
+    @property
+    @abstractmethod
+    def ensure_numerical_cols(self):
+        pass
+
+    def pre_read_data(self):
+        assert isinstance(self.ensure_numerical_cols, list) and (len(self.ensure_numerical_cols) == 0 or all(
+            isinstance(e, str) and len(e.strip()) > 0 for e in self.ensure_numerical_cols)), "ensure_numerical_cols must be list of column names"
+
+        assert isinstance(self.ensure_categorical_cols, list) and (len(self.ensure_categorical_cols) == 0 or all(
+            isinstance(e, str) and len(e.strip()) > 0 for e in self.ensure_categorical_cols)), "ensure_categorical_cols must be list of column names"
+
+        numerical_set = set(self.ensure_numerical_cols)
+        categorical_set = set(self.ensure_categorical_cols)
+        common_set = numerical_set.intersection(categorical_set)
+        assert len(common_set) == 0, f"""{list(
+            common_set)} both in the ensure_numerical_cols and ensure_categorical_cols"""
+
+    def post_read_data(self, df: pd.DataFrame):
+
+        assert isinstance(
+            df, pd.DataFrame), "method `read_data_file` must return pd.DataFrame"
+
+        for col in self.ensure_numerical_cols:
+            assert col in df.columns, f"""ensure_numerical_cols: `{
+                col}` not in data columns"""
+            try:
+                df[col] = pd.to_numeric(df[col], errors='raise')
+            except ValueError as e:
+                raise ValueError(
+                    f"""Failed to apply `pd.to_numeric` on column [{col}]: {e}""")
+
+        for col in self.ensure_categorical_cols:
+            assert col in df.columns, f"""ensure_categorical_cols: `{
+                col}` not in data columns"""
+            try:
+                df[col] = df[col].astype(str)
+            except ValueError as e:
+                raise ValueError(
+                    f"Failed to cast column [{col}] to string: {e}")
+
+    def split_data(self, split: Dict[str, float | int],
+                   seed: Optional[int] = 1377,
+                   override: bool = True,
+                   compression: bool = False) -> Dict[str, Path]:
+        assert isinstance(split, dict), "`split` must be Dict[str, float|int]"
+        file_path: Path = self.file_path
+        base_stem = file_path.stem.split('.')[0]
+        suffix = '.csv' if not compression else '.csv.gz'
+        if all(file_path.with_name(f"{base_stem}_{sp}{suffix}").exists()
+               for sp in split.keys()) \
+                and not override:
+            print("splits already exists, skip split.")
+            return {f'{sp}': file_path.with_name(f"{base_stem}_{sp}{suffix}")
+                    for sp in split.keys()}
+
+        print('read data set...')
+        data = self.read_data_file()
+        data_size = len(data)
+        ixs = list(range(data_size))
+        if seed is not None:
+            rng = random.Random(seed)
+            rng.shuffle(ixs)
+        start = 0
+        fpath = {}
+        for sp, ratio in sorted(split.items(), key=lambda kv: -kv[1]):
+            assert isinstance(ratio, (float, int))
+            assert not isinstance(ratio, int) or ratio == -1 or ratio > 0, \
+                "integer split ratio can be -1 or positive intergers, -1 means all the rest of data"
+            assert not isinstance(ratio, float) or 1 > ratio > 0, \
+                "float split ratio must be interval (0, 1)"
+            if isinstance(ratio, int):
+                part_len = data_size - start if ratio == -1 else ratio
+                assert part_len > 0, f'`no data left for `{sp}` split'
+            else:
+                part_len = int(data_size * ratio)
+                assert part_len > 0, f'`{sp}` split {ratio} two small'
+            end = start + part_len
+            assert end <= data_size, "bad split: all split sum exceed the data size"
+            data_part = data.iloc[ixs[start: end]]
+            print(f'split: {sp}, n_samples: {part_len}')
+
+            part_path = file_path.with_name(f"{base_stem}_{sp}{suffix}")
+
+            if part_path.exists() and override:
+                os.remove(part_path)
+                print(f"{part_path} *exists*, delete old split `{sp}`")
+
+            if not part_path.exists():
+                print(f"save split `{sp}` at path: {part_path}")
+                data_part.to_csv(part_path, index=False)
+            else:
+                print(f"{part_path} *exists*, skip split `{sp}`")
+
+            fpath[f'{sp}'] = part_path
+            start = end
+        return fpath
+
 
 header: bool = True
 ensure_categorical_cols: List[str] = ['city', 'sex']
