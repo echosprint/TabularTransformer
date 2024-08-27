@@ -2,7 +2,7 @@ from contextlib import nullcontext
 from typing import Literal, Optional
 import torch
 import pandas as pd
-from tabular_transformer.data_common import DataReader
+from tabular_transformer.datareader import DataReader
 from tabular_transformer.preprocessor import normalize_data, power_transform, preprocess
 from tabular_transformer.tabular_transformer import ModelArgs, TabularTransformer
 from tabular_transformer.tokenizer import Tokenizer
