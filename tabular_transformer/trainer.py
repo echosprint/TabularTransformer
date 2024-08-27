@@ -12,7 +12,7 @@ from tabular_transformer.tabular_transformer import TabularTransformer
 from tabular_transformer.tokenizer import Tokenizer
 from tabular_transformer.dataloader import RawDataset, Task
 from tabular_transformer.hyperparameters import HyperParameters, TrainParameters, TrainSettings, ModelArgs
-from tabular_transformer.data_common import DataReader
+from tabular_transformer.datareader import DataReader
 import torch
 import inspect
 import copy
@@ -125,6 +125,8 @@ class Trainer:
         self.loss_rng = random.Random(self.ts.dataset_seed + 140987)
 
         self.loss_type = self.tp.loss_type
+
+        self._init_torch()
 
         if self.resume:
             self._load_checkpoint()
@@ -329,13 +331,14 @@ class Trainer:
         torch.save(save_checkpoint, os.path.join(
             self.ts.out_dir, self.output_checkpoint))
 
-    def _create_model(self):
-
+    def _init_torch(self):
         # init seed before create model
         torch.manual_seed(self.ts.torch_seed)
         # when enabled, pyTorch is allowed to use the TensorFloat32 (TF32) tensor cores
         torch.backends.cuda.matmul.allow_tf32 = True  # allow tf32 on matmul
         torch.backends.cudnn.allow_tf32 = True  # allow tf32 on cudnn
+
+    def _create_model(self):
 
         self.model_args = ModelArgs(
             dim=self.hp.dim,
