@@ -1,5 +1,5 @@
 import numpy as np
-from tabular_transformer.data_common import DataReader, download
+from tabular_transformer.datareader import DataReader
 from tabular_transformer.util import FeatureType, TaskType, CATEGORICAL_UNK
 from tabular_transformer.tokenizer import Tokenizer
 import pandas as pd
@@ -240,6 +240,6 @@ class Task:
                 yield (feature_tokens, feature_weight), y
         return generator()
 
-    @staticmethod
-    def download_dataset(url: str, save_fname: str):
-        download(url, save_fname)
+    # @staticmethod
+    # def download_dataset(url: str, save_fname: str):
+    #     download(url, save_fname)
