@@ -11,26 +11,33 @@ from tabular_transformer.util import TaskType
 
 class TabularDataset():
     datareader: DataReader
+
     min_cat_count: int
-    task_type: TaskType
-    target_map: Optional[Dict[str, int]]
-    n_class: int
+    task_type: Optional[TaskType]
+    n_class: Optional[int]
+    feature_vocab: Dict[str, int]
+
     apply_power_transform: bool
-    # seed: int
     device: str
 
-    original_feature_stats: FeatureStats
+    original_feature_stats: Optional[FeatureStats]
     feature_stats: FeatureStats
+    merged_feature_stats: FeatureStats
 
+    # num of features x, `label` not included
     num_cols: int
+    # num of samples
     num_rows: int
 
+    # label column name
     label: Optional[str]
     ensure_categorical_cols: List[str]
     ensure_numerical_cols: List[str]
 
-    dataset_tok: torch.Tensor
-    dataset_val: torch.Tensor
+    # dataset for loader
+    dataset_x_tok: torch.Tensor
+    dataset_x_val: torch.Tensor
+    dataset_y: Optional[torch.Tensor]
 
     def __init__(self,
                  datareader: DataReader,
@@ -66,6 +73,9 @@ class TabularDataset():
 
         self.stats_transform_y(table_y)
 
+        self.merged_feature_stats = self.feature_stats.merge_original(
+            self.original_feature_stats)
+
     def extract_table(self, table):
         if self.label is None:
             return table, None
@@ -76,8 +86,8 @@ class TabularDataset():
 
     def stat_cat_cls_x(self, table):
 
-        if self.original_feature_stats is not None:
-            return
+        # if self.original_feature_stats is not None:
+        #     return
 
         cls_dict = {}
         col_type = []
@@ -133,6 +143,7 @@ class TabularDataset():
 
         tok_table = []
         val_table = []
+        feature_vocab = {f"{col}_unk": idx for idx, col in enumerate(table_col_names)}  # noqa: E501
 
         cls_dict = self.feature_stats.x_cls_dict \
             if self.original_feature_stats is None \
@@ -153,6 +164,10 @@ class TabularDataset():
                 tok_table.append(int_col.to_numpy().astype(np.int16))
                 val_table.append(
                     np.full(len(int_col), 1.0, dtype=np.float32))
+
+                feature_vocab.update(
+                    {f"{col}_{cl}": cls_num + i for i, cl in enumerate(valid_cls)})
+
                 cls_num += len(valid_cls)
 
             elif col in self.ensure_numerical_cols:
@@ -163,6 +178,9 @@ class TabularDataset():
 
                 tok_table.append(tok_col.to_numpy().astype(np.int16))
                 val_table.append(fill_col.to_numpy().astype(np.float32))
+
+                feature_vocab[f"{col}_num"] = cls_num
+
                 cls_num += 1
 
             else:
@@ -184,6 +202,9 @@ class TabularDataset():
 
         self.unk_tok = torch.arange(
             self.num_cols, device=tok_tensor.device, dtype=torch.int16)
+
+        self.feature_stats = self.feature_stats(
+            vocab=feature_vocab, vocab_size=len(feature_vocab))
 
         return tok_tensor, val_tensor
 
@@ -219,8 +240,8 @@ class TabularDataset():
         return mean_values, std_values
 
     def stat_num_x(self, tok_tensor, val_tensor):
-        if self.original_feature_stats is not None:
-            return
+        # if self.original_feature_stats is not None:
+        #     return
 
         mean_values, std_values = self.cal_mean_std(
             tok_tensor, val_tensor, self.col_mask)
@@ -235,6 +256,9 @@ class TabularDataset():
 
     def stats_transform_y(self, table_y):
         if table_y is None:
+            self.dataset_y = None
+            self.n_class = None
+            self.task_type = None
             return
 
         col_y = table_y.column(0)
@@ -243,16 +267,20 @@ class TabularDataset():
             y_cls = col_y.unique().to_pylist()
             assert all(cls is not None and len(cls) > 0 for cls in y_cls), \
                 "class in label must not be empty"
-            self.feature_stats = self.feature_stats(y_cls=y_cls)
+            self.feature_stats = self.feature_stats(y_cls=y_cls, y_type='cat')
             valid_cls = self.original_feature_stats.y_cls \
                 if self.original_feature_stats is not None and \
                 self.original_feature_stats.y_cls is not None \
                 else self.feature_stats.y_cls
+            assert len(valid_cls) >= 2, \
+                "there must be at least two classes in label"
             int_col = pc.index_in(
                 col_y, value_set=pa.array(valid_cls))
 
             y_tok = pc.cast(int_col, pa.int16()).to_numpy().astype(np.int16)
             self.dataset_y = torch.tensor(y_tok, device=self.device)
+            self.n_class = 1 if len(valid_cls) <= 2 else len(valid_cls)
+            self.task_type = TaskType.BINCLASS if self.n_class == 1 else TaskType.MULTICLASS
 
         elif self.label in self.ensure_numerical_cols:
             assert pc.sum(pc.is_null(col_y, nan_is_null=True)).as_py() == 0, \
@@ -269,7 +297,8 @@ class TabularDataset():
             y_std_log = y_log.std().item()
 
             self.feature_stats = self.feature_stats(
-                y_num_stats=(y_mean, y_std, y_mean_log, y_std_log))
+                y_num_stats=(y_mean, y_std, y_mean_log, y_std_log),
+                y_type='num')
 
             y_num_stats = self.original_feature_stats.y_num_stats \
                 if self.original_feature_stats is not None and \
@@ -282,6 +311,8 @@ class TabularDataset():
                 self.dataset_y = (y_log - mean_log) / (std_log + 1e-8)
             else:
                 self.dataset_y = (y_tensor - mean) / (std + 1e-8)
+            self.n_class = 1
+            self.task_type = TaskType.REGRESSION
 
         else:
             raise ValueError("bad label")
