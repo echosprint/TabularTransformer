@@ -15,7 +15,6 @@ class TabularDataset():
     min_cat_count: int
     task_type: Optional[TaskType]
     n_class: Optional[int]
-    feature_vocab: Dict[str, int]
 
     apply_power_transform: bool
     device: str
