@@ -10,12 +10,27 @@ class FeatureStats:
     x_cls_dict: Dict[str, List[str]] = field(default_factory=dict)
     x_num_stats: Dict[Literal['mean', 'std', 'mean_log', 'std_log'], torch.Tensor] = field(default_factory=dict)  # noqa: E501
 
-    vocab: Dict[str, int] = field(default_factory=dict)
-    vocab_size: int = 0
-
     y_type: Optional[Literal['cat', 'num']] = None
     y_cls: Optional[List[str]] = None
     y_num_stats: Optional[Tuple[float, float, float, float]] = None
+
+    @property
+    def vocab(self):
+        vocab = {f"{col}_unk": idx for idx,
+                 (col, _) in enumerate(self.x_col_type)}
+        cls_num = len(vocab)
+        for col, ty in self.x_col_type:
+            if ty == 'cat':
+                cls = self.x_cls_dict.get(col, None)
+                if cls is None:
+                    return {}
+                vocab.update(
+                    {f"{col}_{cl}": cls_num + i for i, cl in enumerate(cls)})
+                cls_num += len(cls)
+            else:
+                vocab[f"{col}_num"] = cls_num
+                cls_num += 1
+        return vocab
 
     def __call__(self, **kwargs) -> 'FeatureStats':
         return replace(self, **kwargs)
@@ -53,7 +68,5 @@ class FeatureStats:
             f"    y_type={self.y_type if self.y_type is None else f'\'{self.y_type}\''},\n"  # noqa: E501
             f"    y_cls={self.y_cls},\n"
             f"    y_num_stats={[round(elem, 4) for elem in self.y_num_stats] if self.y_num_stats is not None else None},\n"  # noqa: E501
-            f"    vocab={{\n        {vocab_str}\n    }},\n"
-            f"    vocab_size={self.vocab_size},\n"
             f")"
         )

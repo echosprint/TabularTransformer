@@ -65,8 +65,8 @@ class TabularDataset():
 
         table_x, table_y = self.extract_table(table)
 
-        self.stat_cat_cls_x(table_x)
         self.stat_col_type_x(table_x)
+        self.stat_cat_cls_x(table_x)
         tok_tensor, val_tensor = self.process_table_x(table_x)
         self.stat_num_x(tok_tensor, val_tensor)
         self.transform_x(tok_tensor, val_tensor)
@@ -75,6 +75,12 @@ class TabularDataset():
 
         self.merged_feature_stats = self.feature_stats.merge_original(
             self.original_feature_stats)
+
+        del table, table_x, table_y
+        del tok_tensor, val_tensor
+
+        if 'cuda' in self.device:
+            torch.cuda.empty_cache()
 
     def extract_table(self, table):
         if self.label is None:
@@ -86,14 +92,13 @@ class TabularDataset():
 
     def stat_cat_cls_x(self, table):
 
-        # if self.original_feature_stats is not None:
-        #     return
+        if self.original_feature_stats is not None:
+            return
 
         cls_dict = {}
-        col_type = []
         for col in table.column_names:
             if col in self.ensure_categorical_cols:
-                col_type.append((col, 'cat'))
+                # col_type.append((col, 'cat'))
 
                 cls_counts = pc.value_counts(table[col])
 
@@ -111,13 +116,7 @@ class TabularDataset():
                     f"no class in col {col} satisfies `min_cat_count`"
 
                 cls_dict[col] = valid_cls
-            elif col in self.ensure_numerical_cols:
-                col_type.append((col, 'num'))
-            else:
-                raise ValueError("bad col")
-
-        self.feature_stats = self.feature_stats(x_cls_dict=cls_dict,
-                                                x_col_type=col_type)
+        self.feature_stats = self.feature_stats(x_cls_dict=cls_dict)
 
     def stat_col_type_x(self, table):
         col_type = []
@@ -143,7 +142,6 @@ class TabularDataset():
 
         tok_table = []
         val_table = []
-        feature_vocab = {f"{col}_unk": idx for idx, col in enumerate(table_col_names)}  # noqa: E501
 
         cls_dict = self.feature_stats.x_cls_dict \
             if self.original_feature_stats is None \
@@ -165,9 +163,6 @@ class TabularDataset():
                 val_table.append(
                     np.full(len(int_col), 1.0, dtype=np.float32))
 
-                feature_vocab.update(
-                    {f"{col}_{cl}": cls_num + i for i, cl in enumerate(valid_cls)})
-
                 cls_num += len(valid_cls)
 
             elif col in self.ensure_numerical_cols:
@@ -179,8 +174,6 @@ class TabularDataset():
                 tok_table.append(tok_col.to_numpy().astype(np.int16))
                 val_table.append(fill_col.to_numpy().astype(np.float32))
 
-                feature_vocab[f"{col}_num"] = cls_num
-
                 cls_num += 1
 
             else:
@@ -188,9 +181,8 @@ class TabularDataset():
 
             assert max(cls_num, idx) < 32767
 
-        tok_numpy, val_numpy = np.array(tok_table), np.array(val_table)
-        tok_tensor = torch.tensor(tok_numpy)
-        val_tensor = torch.tensor(val_numpy)
+        tok_tensor = torch.tensor(np.array(tok_table))
+        val_tensor = torch.tensor(np.array(val_table))
 
         tok_tensor = tok_tensor.to(self.device, non_blocking=True)
         val_tensor = val_tensor.to(self.device, non_blocking=True)
@@ -202,9 +194,6 @@ class TabularDataset():
 
         self.unk_tok = torch.arange(
             self.num_cols, device=tok_tensor.device, dtype=torch.int16)
-
-        self.feature_stats = self.feature_stats(
-            vocab=feature_vocab, vocab_size=len(feature_vocab))
 
         return tok_tensor, val_tensor
 
@@ -240,8 +229,8 @@ class TabularDataset():
         return mean_values, std_values
 
     def stat_num_x(self, tok_tensor, val_tensor):
-        # if self.original_feature_stats is not None:
-        #     return
+        if self.original_feature_stats is not None:
+            return
 
         mean_values, std_values = self.cal_mean_std(
             tok_tensor, val_tensor, self.col_mask)
