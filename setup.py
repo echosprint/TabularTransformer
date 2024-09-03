@@ -29,6 +29,7 @@ setup(
         'scikit-learn>=1.3.2',
         'pandas>=2.1.0',
         'numpy>=1.26.4',
+        'pyarrow>=14.0.2'
     ],
     classifiers=[
         'Development Status :: 4 - Beta',
