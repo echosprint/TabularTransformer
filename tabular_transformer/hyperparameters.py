@@ -57,6 +57,8 @@ class TrainSettings(DataclassTool):
     dataset_seed: int = 42
     # seed for torch
     torch_seed: int = 1377
+    # load dataset on `dataset_device` when tokenized
+    dataset_device: str = "cpu"
     # train device, e.g. `cpu`, `cuda`, `cuda:0`, `cuda:1` etc., or try `mps` on macbooks
     device: str = "cuda"
     # pytorch dtype: `float32` | `bfloat16` | `float16`
@@ -67,8 +69,8 @@ class TrainSettings(DataclassTool):
 
 @dataclass
 class TrainParameters(DataclassTool):
-    # train epochs for a dataset
-    train_epochs: int = 200
+    # total number of training iterations
+    max_iters: int = 100000
     # batch size per iter
     batch_size: int = 128
     # output dimension
