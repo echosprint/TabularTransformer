@@ -12,6 +12,11 @@ from tabular_transformer.util import TaskType
 class TabularDataset():
     datareader: DataReader
 
+    validate_split: Optional[float]
+    shuffle: bool
+
+    seed: Optional[int]
+
     min_cat_count: int
     task_type: Optional[TaskType]
     n_class: Optional[int]
@@ -27,6 +32,7 @@ class TabularDataset():
     num_cols: int
     # num of samples
     num_rows: int
+    column_names: List[str]
 
     # label column name
     label: Optional[str]
@@ -38,15 +44,30 @@ class TabularDataset():
     dataset_x_val: torch.Tensor
     dataset_y: Optional[torch.Tensor]
 
+    n_train: int
+    n_validate: int
+    train_split_indices: torch.Tensor
+    validate_split_indices: torch.Tensor
+
     def __init__(self,
                  datareader: DataReader,
                  device: str = 'cpu',
                  original_feature_stats: FeatureStats = None,
                  min_cat_count: Union[int, float] = 200,
                  apply_power_transform: bool = True,
+                 validate_split: Optional[float] = 0.2,
+                 shuffle: bool = True,
+                 seed: Optional[int] = 42,
                  ):
         self.device = device
         self.apply_power_transform = apply_power_transform
+
+        self.seed = seed
+        if self.seed is not None:
+            torch.manual_seed(self.seed)
+
+        self.validate_split = validate_split
+        self.shuffle = shuffle
 
         self.datareader = datareader
         table = self.datareader.read_data_file()
@@ -54,6 +75,7 @@ class TabularDataset():
         self.ensure_categorical_cols = self.datareader.ensure_categorical_cols
         self.ensure_numerical_cols = self.datareader.ensure_numerical_cols
         self.num_rows = table.num_rows
+        self.column_names = table.column_names
 
         self.original_feature_stats = original_feature_stats
         self.feature_stats = FeatureStats()
@@ -74,6 +96,8 @@ class TabularDataset():
 
         self.merged_feature_stats = self.feature_stats.merge_original(
             self.original_feature_stats)
+
+        self.split_dataset()
 
         del table, table_x, table_y
         del tok_tensor, val_tensor
@@ -180,8 +204,8 @@ class TabularDataset():
 
             assert max(cls_num, idx) < 32767
 
-        tok_tensor = torch.tensor(np.array(tok_table))
-        val_tensor = torch.tensor(np.array(val_table))
+        tok_tensor = torch.tensor(np.array(tok_table), dtype=torch.int16)
+        val_tensor = torch.tensor(np.array(val_table), dtype=torch.float32)
 
         tok_tensor = tok_tensor.to(self.device, non_blocking=True)
         val_tensor = val_tensor.to(self.device, non_blocking=True)
@@ -335,18 +359,18 @@ class TabularDataset():
         self.dataset_x_tok = tok_tensor.transpose(0, 1).contiguous()
         self.dataset_x_val = transformed_tensor.transpose(0, 1).contiguous()
 
-        # rand_unknown_mask = torch.rand(
-        #     dataset_tok.shape, device=device) >= unk_ratio
-
-        # dataset_tok_unk = torch.where(rand_unknown_mask,
-        #                               dataset_tok,
-        #                               unk_val.unsqueeze(0).repeat(
-        #                                   dataset_tok.shape[0], 1)
-        #                               )
-        # dataset_val_unk = torch.where(rand_unknown_mask,
-        #                               dataset_val,
-        #                               torch.ones(dataset_val.shape,
-        #                                          device=device)
-        #                               )
-
-        # permuted_indices = torch.randperm(dataset_tok.size(0), device=device)
+    def split_dataset(self):
+        if self.validate_split is None:
+            n_validate = 0
+        else:
+            n_validate = int(self.num_rows * self.validate_split)
+        assert self.num_rows > n_validate >= 0
+        self.n_validate = n_validate
+        self.n_train = self.num_rows - n_validate
+        if self.shuffle:
+            permuted_indices = torch.randperm(
+                self.num_rows, device=self.device)
+        else:
+            permuted_indices = torch.arange(self.num_rows, device=self.device)
+        self.train_split_indices = permuted_indices[self.n_validate:]
+        self.validate_split_indices = permuted_indices[:self.n_validate]
