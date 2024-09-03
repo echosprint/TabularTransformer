@@ -49,8 +49,6 @@ class TrainSettings(DataclassTool):
     min_cat_count: float = 0.02
     # apply power transform for numerical columns
     apply_power_transform: bool = True
-    # remove outliers
-    remove_outlier: bool = False
     # default unk ratio for training if not set in `unk_ratio` dict
     unk_ratio_default: float = 0.2
     # seed for dataset loader
