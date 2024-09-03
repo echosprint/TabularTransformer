@@ -28,11 +28,12 @@ class TokenDataset(torch.utils.data.IterableDataset):
         self.unk_ratio = unk_ratio
         self.unk_ratio_default = unk_ratio_default
 
-        self.seed = seed
-        if self.seed is not None:
-            torch.manual_seed(self.seed)
-
         self.device = tabular_dataset.device
+
+        self.seed = seed
+        self.rng = torch.Generator(device=self.device)
+        if self.seed is not None:
+            self.rng.manual_seed(self.seed)
 
         self.batch_size = batch_size  # number of rows per time
 
@@ -110,7 +111,10 @@ class TokenDataset(torch.utils.data.IterableDataset):
         while True:
 
             ixs = torch.randperm(
-                self.dataset_split_size, device=self.device)
+                self.dataset_split_size,
+                device=self.device,
+                generator=self.rng
+            )
 
             for n in range(self.num_batches):
                 start = n * self.batch_size

@@ -61,8 +61,9 @@ class TabularDataset():
         self.apply_power_transform = apply_power_transform
 
         self.seed = seed
+        self.rng = torch.Generator(device=self.device)
         if self.seed is not None:
-            torch.manual_seed(self.seed)
+            self.rng.manual_seed(self.seed)
 
         self.validate_split = validate_split
 
@@ -365,6 +366,6 @@ class TabularDataset():
         self.n_validate = n_validate
         self.n_train = self.num_rows - n_validate
         permuted_indices = torch.randperm(
-            self.num_rows, device=self.device)
+            self.num_rows, device=self.device, generator=self.rng)
         self.train_split_indices = permuted_indices[self.n_validate:]
         self.validate_split_indices = permuted_indices[:self.n_validate]
