@@ -32,6 +32,14 @@ class FeatureStats:
                 cls_num += 1
         return vocab
 
+    @property
+    def seq_len(self):
+        return len(self.x_col_type)
+
+    @property
+    def vocab_size(self):
+        return len(self.vocab)
+
     def __call__(self, **kwargs) -> 'FeatureStats':
         return replace(self, **kwargs)
 
