@@ -53,6 +53,13 @@ class TokenDataset(torch.utils.data.IterableDataset):
         self.dataset_x_val = self.tabular_dataset.dataset_x_val
         self.dataset_y = self.tabular_dataset.dataset_y
 
+        self.dataset_split_size = self.split_indices.size(0)
+        self.num_batches = self.dataset_split_size // self.batch_size
+
+        assert self.batch_size <= self.dataset_split_size, \
+            f"""the batch size is too large for the dataset, batch_size: {
+                self.batch_size}, dataset `{self.split}` split size: {self.dataset_split_size}"""
+
         self.init_unk_mask()
 
     def init_unk_mask(self):
@@ -100,21 +107,12 @@ class TokenDataset(torch.utils.data.IterableDataset):
 
     def __iter__(self):
 
-        dataset_split_size = self.split_indices.size(0)
-        num_batches = dataset_split_size // self.batch_size
-
-        self.num_batches = num_batches
-
-        assert self.batch_size <= dataset_split_size, \
-            f"""the batch size is too large for the dataset, batch_size: {
-                self.batch_size}, dataset `{self.split}` split size: {dataset_split_size}"""
-
         while True:
 
             ixs = torch.randperm(
-                dataset_split_size, device=self.device)
+                self.dataset_split_size, device=self.device)
 
-            for n in range(num_batches):
+            for n in range(self.num_batches):
                 start = n * self.batch_size
                 end = start + self.batch_size
 
