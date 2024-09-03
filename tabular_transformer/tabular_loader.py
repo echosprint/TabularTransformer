@@ -22,7 +22,7 @@ class TokenDataset(torch.utils.data.IterableDataset):
                  tabular_dataset: TabularDataset,
                  unk_ratio: Optional[Dict[str, float]] = None,
                  unk_ratio_default: Optional[float] = None,
-                 seed: Optional[int] = None,
+                 seed: Optional[int] = 42,
                  ):
         super().__init__()
         self.unk_ratio = unk_ratio
@@ -62,7 +62,8 @@ class TokenDataset(torch.utils.data.IterableDataset):
             assert isinstance(self.unk_ratio, dict)
             assert all(col in self.tabular_dataset.column_names
                        and 0 <= val <= 1
-                       for col, val in self.unk_ratio.items())
+                       for col, val in self.unk_ratio.items()), \
+                "col in `unk_ratio` not exist."
 
         if self.unk_ratio_default is None:
             self.enable_unk = False

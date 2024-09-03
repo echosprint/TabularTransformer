@@ -13,7 +13,6 @@ class TabularDataset():
     datareader: DataReader
 
     validate_split: Optional[float]
-    shuffle: bool
 
     seed: Optional[int]
 
@@ -56,7 +55,6 @@ class TabularDataset():
                  min_cat_count: Union[int, float] = 200,
                  apply_power_transform: bool = True,
                  validate_split: Optional[float] = 0.2,
-                 shuffle: bool = True,
                  seed: Optional[int] = 42,
                  ):
         self.device = device
@@ -67,7 +65,6 @@ class TabularDataset():
             torch.manual_seed(self.seed)
 
         self.validate_split = validate_split
-        self.shuffle = shuffle
 
         self.datareader = datareader
         table = self.datareader.read_data_file()
@@ -367,10 +364,7 @@ class TabularDataset():
         assert self.num_rows > n_validate >= 0
         self.n_validate = n_validate
         self.n_train = self.num_rows - n_validate
-        if self.shuffle:
-            permuted_indices = torch.randperm(
-                self.num_rows, device=self.device)
-        else:
-            permuted_indices = torch.arange(self.num_rows, device=self.device)
+        permuted_indices = torch.randperm(
+            self.num_rows, device=self.device)
         self.train_split_indices = permuted_indices[self.n_validate:]
         self.validate_split_indices = permuted_indices[:self.n_validate]
