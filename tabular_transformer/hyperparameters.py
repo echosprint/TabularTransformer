@@ -19,8 +19,6 @@ class HyperParameters(DataclassTool):
     multiple_of: int = 32
     # dropout ratio
     dropout: float = 0.0
-    # gradient accumulation steps before update, used to simulate larger batch sizes
-    gradient_accumulation_steps: int = 1
     # weight decay in AdamW
     weight_decay: float = 1e-1
     # beta1 in AdamW
