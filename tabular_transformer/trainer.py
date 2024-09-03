@@ -6,11 +6,11 @@ import os
 import random
 import time
 from typing import Any, Dict, List, Literal, Optional, Union
-from tabular_transformer.preprocessor import CategoricalStats, NumericalStats
+from tabular_transformer.featurestats import FeatureStats
+from tabular_transformer.tabular_dataset import TabularDataset
+from tabular_transformer.tabular_loader import Task
 from tabular_transformer.util import FeatureType, LossType, TaskType, equals_except
 from tabular_transformer.tabular_transformer import TabularTransformer
-from tabular_transformer.tokenizer import Tokenizer
-from tabular_transformer.dataloader import RawDataset, Task
 from tabular_transformer.hyperparameters import HyperParameters, TrainParameters, TrainSettings, ModelArgs
 from tabular_transformer.datareader import DataReader
 import torch
@@ -28,7 +28,7 @@ class Trainer:
 
     # dataset
     data_reader: DataReader  # data reader
-    dataset: RawDataset  # dataset
+    dataset: TabularDataset  # dataset
 
     # model
     model: Optional[TabularTransformer]  # model
@@ -44,15 +44,9 @@ class Trainer:
     checkpoint: Optional[Dict[str, Any]]
 
     # dataset feature
-    tokenizer: Tokenizer  # tokenizer
-    feature_vocab: Dict[str, int]
-    feature_type: Dict[str, FeatureType]
-    feature_stats: Dict[str, Union[CategoricalStats, NumericalStats]]
-    target_map: Dict[str, int]
-    target_stats: NumericalStats
+    original_feature_stats: FeatureStats
+    merged_feature_stats: FeatureStats
     task_type: TaskType
-    feature_vocab_size: int
-    max_seq_len: int
 
     # learning rate
     transformer_lr: float
@@ -72,7 +66,9 @@ class Trainer:
     def __init__(self, hp: HyperParameters, ts: TrainSettings):
         assert isinstance(hp, HyperParameters)
         assert isinstance(ts, TrainSettings)
-        assert 'cuda' not in ts.device or torch.cuda.is_available(), "cuda is not available"
+        assert all('cuda' not in device
+                   for device in [ts.device, ts.dataset_device]) \
+            or torch.cuda.is_available(), "cuda is not available"
         assert 'cuda' in ts.device or ts.dtype != 'bfloat16', 'only cuda support bfloat16 dtype'
         self.hp = hp
         self.ts = ts
@@ -81,7 +77,8 @@ class Trainer:
               data_reader: DataReader,
               tp: TrainParameters,
               resume: bool = False,
-              replace_output_head: Optional[bool] = None, ):
+              replace_output_head: Optional[bool] = None
+              ):
 
         assert isinstance(data_reader, DataReader)
         assert isinstance(tp, TrainParameters)
@@ -132,8 +129,6 @@ class Trainer:
             self._load_checkpoint()
 
         self._create_dataset()
-
-        self._init_features()
 
         self._create_model()
 
@@ -199,8 +194,7 @@ class Trainer:
             wandb.init(project=self.ts.wandb_project,
                        name=run_name, config=config)
 
-        num_batches_per_epoch = self.dataset.train_dataset_size // self.tp.batch_size
-        self.lr_decay_iters = self.tp.train_epochs * num_batches_per_epoch
+        self.lr_decay_iters = self.tp.max_iters
         self.min_lr = 0.0  # minimum learning rate, should be ~= learning_rate/10 per Chinchilla
         self.warmup_iters = self.tp.warmup_iters
         assert self.warmup_iters < 0.3 * \
@@ -209,90 +203,84 @@ class Trainer:
         iter_num = 0
         best_val_loss = 1e9
         t0 = time.time()
-        local_iter_num = 0  # number of iterations in the lifetime of this process
         running_mfu = -1.0
 
-        for _epoch in range(self.tp.train_epochs):
-            batch_seed = self.train_rng.randint(1024, 1024*1024)
-            train_batch_iter = self.iter_batches(
-                split="train", seed=batch_seed)
-            # iterate over the dataset
-            for X, Y in train_batch_iter:
-                current_lr = {}
-                # determine and set the learning rate for this iteration
-                for name, param_group in zip(self.optim_group_names, self.optimizer.param_groups):
-                    lr = self.get_lr(iter_num, name)
-                    param_group["lr"] = lr
-                    current_lr.update({f"lr/{name}": lr})
+        batch_seed = self.train_rng.randint(1024, 1024*1024)
+        train_batch_iter = self.iter_batches(
+            split="train", seed=batch_seed)
 
-                # evaluate the loss on train/val sets and write checkpoints
-                if iter_num % self.tp.eval_interval == 0:
-                    losses = self._estimate_loss()
-                    print(f"""step {iter_num}: train loss {
-                        losses['train']:.4f}, val loss {losses['val']:.4f}""")
-                    if self.ts.wandb_log:
-                        self._log(wandb, iter_num, losses,
-                                  current_lr, running_mfu)
-                    if losses["val"] < best_val_loss or self.tp.always_save_checkpoint:
-                        best_val_loss = losses["val"]
-                        if iter_num > 0:
-                            self._save_checkpoint(
-                                iter_num, best_val_loss, config)
-                if iter_num == 0 and self.ts.eval_only:
-                    break
+        iters_per_epoch = self.dataset.n_train // self.tp.batch_size
+        # iterate over the dataset
+        for X, Y in train_batch_iter:
+            current_lr = {}
+            # determine and set the learning rate for this iteration
+            for name, param_group in zip(self.optim_group_names, self.optimizer.param_groups):
+                lr = self.get_lr(iter_num, name)
+                param_group["lr"] = lr
+                current_lr.update({f"lr/{name}": lr})
 
-                # forward backward update, with optional gradient accumulation to simulate larger batch size
-                # and using the GradScaler if data type is float16
-                for micro_step in range(self.hp.gradient_accumulation_steps):
-                    with self.ctx:
-                        logits = self.model(X, Y)
-                        loss = self.model.last_loss
-                        loss = loss / self.hp.gradient_accumulation_steps
-                    # immediately async prefetch next batch while model is doing the forward pass on the GPU
-                    # X, Y = next(train_batch_iter)
-                    # backward pass, with gradient scaling if training in fp16
-                    scaler.scale(loss).backward()
-                # clip the gradient
-                if self.hp.grad_clip != 0.0:
-                    scaler.unscale_(self.optimizer)
-                    torch.nn.utils.clip_grad_norm_(
-                        self.model.parameters(), self.hp.grad_clip)
-                # step the optimizer and scaler if training in fp16
-                scaler.step(self.optimizer)
-                scaler.update()
-                # flush the gradients as soon as we can, no need for this memory anymore
-                self.optimizer.zero_grad(set_to_none=True)
-
-                # timing and logging
-                t1 = time.time()
-                dt = t1 - t0
-                t0 = t1
-                if iter_num % self.ts.log_interval == 0:
-                    # get loss as float, scale up due to the divide above. note: this is a CPU-GPU sync point
-                    lossf = loss.item() * self.hp.gradient_accumulation_steps
-                    if local_iter_num >= 5:  # let the training loop settle a bit
-                        mfu = self._estimate_mfu(
-                            self.tp.batch_size * self.hp.gradient_accumulation_steps, dt)
-                        running_mfu = mfu if running_mfu == -1.0 else 0.9 * running_mfu + 0.1 * mfu
-
-                    lr_str = f"lr {list(current_lr.values())[0]:e}" \
-                        if len(set(current_lr.values())) == 1 \
-                        else f"lr/t {current_lr['lr/transformer']:e} | lr/o {current_lr['lr/output']:e}"
-
-                    print(
-                        f"{iter_num} | loss {lossf:.4f} | {lr_str} |"
-                        f"{dt*1000: .2f}ms | mfu {running_mfu*100: .2f}%"
-                    )
-                iter_num += 1
-                local_iter_num += 1
-
-            # two nested loops need to break twice
-            if self.ts.eval_only:
+            # evaluate the loss on train/val sets and write checkpoints
+            if iter_num % self.tp.eval_interval == 0:
+                losses = self._estimate_loss()
+                print(f"""step {iter_num}: train loss {
+                    losses['train']:.4f}, val loss {losses['val']:.4f}""")
+                if self.ts.wandb_log:
+                    self._log(wandb, iter_num, losses,
+                              current_lr, running_mfu)
+                if losses["val"] < best_val_loss or self.tp.always_save_checkpoint:
+                    best_val_loss = losses["val"]
+                    if iter_num > 0:
+                        self._save_checkpoint(
+                            iter_num, best_val_loss, config)
+            if iter_num == 0 and self.ts.eval_only:
                 break
 
-        if self.tp.always_save_checkpoint:
-            self._save_checkpoint(
-                iter_num, best_val_loss, config)
+            # forward backward update, with optional gradient accumulation to simulate larger batch size
+            # and using the GradScaler if data type is float16
+            with self.ctx:
+                logits = self.model(X, Y)
+                loss = self.model.last_loss
+
+            # backward pass, with gradient scaling if training in fp16
+            scaler.scale(loss).backward()
+
+            # clip the gradient
+            if self.hp.grad_clip != 0.0:
+                scaler.unscale_(self.optimizer)
+                torch.nn.utils.clip_grad_norm_(
+                    self.model.parameters(), self.hp.grad_clip)
+
+            # step the optimizer and scaler if training in fp16
+            scaler.step(self.optimizer)
+            scaler.update()
+            # flush the gradients as soon as we can, no need for this memory anymore
+            self.optimizer.zero_grad(set_to_none=True)
+
+            # timing and logging
+            t1 = time.time()
+            dt = t1 - t0
+            t0 = t1
+            if iter_num % self.ts.log_interval == 0:
+                # get loss as float, scale up due to the divide above. note: this is a CPU-GPU sync point
+                lossf = loss.item()
+                if iter_num >= 5:  # let the training loop settle a bit
+                    mfu = self._estimate_mfu(
+                        self.tp.batch_size, dt)
+                    running_mfu = mfu if running_mfu == -1.0 else 0.9 * running_mfu + 0.1 * mfu
+
+                lr_str = f"lr {list(current_lr.values())[0]:e}" \
+                    if len(set(current_lr.values())) == 1 \
+                    else f"lr/t {current_lr['lr/transformer']:e} | lr/o {current_lr['lr/output']:e}"
+                epochs = iter_num / iters_per_epoch
+                print(
+                    f"{iter_num} | epoch {epochs:.2f} | loss {lossf:.4f} |"
+                    f"{lr_str} |{dt*1000: .2f}ms | mfu {running_mfu*100: .2f}%"
+                )
+
+            if iter_num >= self.tp.max_iters:
+                break
+
+            iter_num += 1
 
     def _log(self, wandb, iter_num, losses, lr, running_mfu):
         try:
@@ -316,16 +304,7 @@ class Trainer:
             "iter_num": iter_num,
             "best_val_loss": best_val_loss,
             "config": config,
-            # "dataset_attr": Task.get_dataset_attributes(),
-            "features": {'feature_stats': self.feature_stats,
-                         'feature_type': self.feature_type,
-                         'feature_vocab': self.feature_vocab,
-                         'feature_vocab_size': self.feature_vocab_size,
-                         'max_seq_len': self.max_seq_len,
-                         'target_map': self.target_map,
-                         'target_stats': self.target_stats,
-                         'task_type': self.task_type,
-                         }
+            "features": self.merged_feature_stats,
         }
         print(f"saving checkpoint to {self.ts.out_dir}")
         torch.save(save_checkpoint, os.path.join(
@@ -345,12 +324,12 @@ class Trainer:
             n_layers=self.hp.n_layers,
             n_heads=self.hp.n_heads,
             loss_type=self.tp.loss_type,
-            feature_vocab_size=self.feature_vocab_size,
+            feature_vocab_size=self.merged_feature_stats.vocab_size,
             output_dim=self.tp.output_dim,
             output_hidden_dim=self.hp.output_hidden_dim,
             output_forward_dim=self.hp.output_forward_dim,
             multiple_of=self.hp.multiple_of,
-            max_seq_len=self.max_seq_len,
+            max_seq_len=self.merged_feature_stats.seq_len,
             dropout=self.hp.dropout,
         )
         model_args_dict = self.model_args.asdict()
@@ -383,33 +362,26 @@ class Trainer:
         self.model.load_state_dict(state_dict)
 
     def _create_dataset(self):
-        self.dataset = RawDataset(datareader=self.data_reader,
-                                  min_cat_count=self.ts.min_cat_count,
-                                  validate_split=self.tp.validate_split,
-                                  seed=self.ts.dataset_seed)
-
-    def _init_features(self):
         if self.resume:
-            features = copy.deepcopy(self.checkpoint['features'])
-            self.feature_stats = features['feature_stats']
-            self.feature_type = features['feature_type']
-            assert self.feature_type == self.dataset.feature_type
-            self.feature_vocab = features['feature_vocab']
-            self.feature_vocab_size = features['feature_vocab_size']
-            self.max_seq_len = features['max_seq_len']
+            self.original_feature_stats = copy.deepcopy(
+                self.checkpoint['features'])
+            if self.replace_output_head:
+                self.original_feature_stats = self.original_feature_stats.reset_y_stats()
         else:
-            self.feature_stats = self.dataset.feature_stats
-            self.feature_type = self.dataset.feature_type
-            self.feature_vocab = self.dataset.feature_vocab
-            self.feature_vocab_size = self.dataset.feature_vocab_size
-            self.max_seq_len = self.dataset.num_cols
+            self.original_feature_stats = None
 
-        self.tokenizer = Tokenizer(self.feature_vocab, self.feature_type)
-        self.target_map = self.dataset.target_map if self.dataset.target_map is not None else {}
+        self.dataset = TabularDataset(
+            datareader=self.data_reader,
+            device=self.ts.dataset_device,
+            original_feature_stats=self.original_feature_stats,
+            min_cat_count=self.ts.min_cat_count,
+            apply_power_transform=self.ts.apply_power_transform,
+            validate_split=self.tp.validate_split,
+            seed=self.ts.dataset_seed
+        )
+
         self.task_type = self.dataset.task_type
-        self.target_stats = NumericalStats(*([0.]*6)) \
-            if self.task_type is not TaskType.REGRESSION \
-            else next(iter(self.dataset.stats_y[0].values()))
+        self.merged_feature_stats = self.dataset.merged_feature_stats
 
         assert self.task_type is not TaskType.BINCLASS or \
             self.loss_type in ('BINCE', 'SUPCON'), \
@@ -428,9 +400,6 @@ class Trainer:
             f"dataset target has `n_class` {self.dataset.n_class}, " \
             f"but given `output_dim` {self.tp.output_dim}"
 
-        assert all(k in self.feature_type for k in self.tp.unk_ratio), \
-            "column specified in `unk_ratio` not exists in the dataset"
-
     def _load_checkpoint(self):
         ckpt_path = os.path.join(
             self.ts.out_dir, self.input_checkpoint)
@@ -441,19 +410,10 @@ class Trainer:
         self.iter_batches = partial(
             Task.iter_batches,
             batch_size=self.tp.batch_size,
-            raw_dataset=self.dataset,
-            feature_type=self.feature_type,
-            feature_stats=self.feature_stats,
-            tokenizer=self.tokenizer,
-            target_map=self.target_map,
-            target_stats=self.target_stats,
-            task_type=self.task_type,
-            apply_power_transform=self.ts.apply_power_transform,
-            remove_outlier=self.ts.remove_outlier,
+            tabular_dataset=self.dataset,
             unk_ratio=self.tp.unk_ratio,
             unk_ratio_default=self.ts.unk_ratio_default,
             device=self.ts.device,
-            num_workers=0,
         )
 
     def _freeup(self):
@@ -485,19 +445,6 @@ class Trainer:
         num_params = sum(p.numel() for pn, p in param_dict.items())
         print("num parameter tensors: "
               f"{len(param_dict)}, with {num_params:,} parameters")
-        # if self.finetune:
-        #     print("finetune mode pretrained parameters learning rate scaled by 0.1")
-        #     finetune_params = [
-        #         p for n, p in param_dict.items() if not n.startswith('output')]
-        #     output_params = [p for n, p in param_dict.items()
-        #                      if n.startswith('output')]
-        #     optim_groups = [
-        #         {'params': finetune_params, 'lr': 0.0},
-        #         # {'params': finetune_params, 'lr': learning_rate},
-        #         {'params': output_params}
-        #     ]
-
-        # else:
 
         # create optim groups. Any parameters that is 2D will be weight decayed, otherwise no.
         # i.e. all weight tensors in matmuls + embeddings decay, all biases and layernorms don't.
