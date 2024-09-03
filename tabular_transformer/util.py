@@ -1,11 +1,11 @@
 from enum import Enum
-import gzip
-import shutil
 import zipfile
 import pandas as pd
 import warnings
 import os
 import requests
+import requests
+from tqdm import tqdm
 
 
 class TaskType(Enum):
@@ -24,11 +24,6 @@ class LossType(Enum):
 class FeatureType(Enum):
     CATEGORICAL = 1
     NUMERICAL = 2
-
-
-SCALAR_NUMERIC = "<|scalarnumeric|>"
-CATEGORICAL_UNK = "<|unknowncategorical|>"
-SCALAR_UNK = "<|unknownscalar|>"
 
 
 def split_data_with_train_validate(datafile, validate_split=0.1, test_split=0):
@@ -237,3 +232,53 @@ def prepare_higgs_dataset():
     print("Cleanup completed. Dataset is ready.")
     print(f"Higgs dataset saved: {extracted_file_path}")
     return extracted_file_path
+
+
+def download_file(url: str, fname: str, chunk_size=1024):
+    """Helper function to download a file from a given url"""
+    resp = requests.get(url, stream=True)
+    total = int(resp.headers.get("content-length", 0))
+    with open(fname, "wb") as file, tqdm(
+        desc=fname,
+        total=total,
+        unit="iB",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as bar:
+        for data in resp.iter_content(chunk_size=chunk_size):
+            size = file.write(data)
+            bar.update(size)
+
+
+def download(url: str, fname: str):
+    """Downloads the dataset to DATA_CACHE_DIR"""
+
+    DATA_CACHE_DIR = os.path.join(
+        os.path.dirname(__file__), 'data', fname.split('.')[0])
+    os.makedirs(DATA_CACHE_DIR, exist_ok=True)
+
+    # download the dataset, unless it's already downloaded
+    data_url = url
+    data_filename = os.path.join(DATA_CACHE_DIR, fname)
+    if not os.path.exists(data_filename):
+        print(f"Downloading {data_url} to {data_filename}...")
+        download_file(data_url, data_filename)
+    else:
+        print(f"{data_filename} already exists, skipping download...")
+
+    # # unpack the tar.gz file into all the data shards (json files)
+    # data_dir = os.path.join(DATA_CACHE_DIR, "TinyStories_all_data")
+    # if not os.path.exists(data_dir):
+    #     os.makedirs(data_dir, exist_ok=True)
+    #     print(f"Unpacking {data_filename}...")
+    #     os.system(f"tar -xzf {data_filename} -C {data_dir}")
+    # else:
+    #     print(f"{data_dir} already exists, skipping unpacking...")
+
+    # print a single example just for debugging and such
+    # shard_filenames = sorted(glob.glob(os.path.join(data_dir, "*.json")))
+    print("Download done.")
+    # print(f"Number of shards: {len(shard_filenames)}")
+    # with open(shard_filenames[0], "r") as f:
+    #     data = json.load(f)
+    # print(f"Example story:\n{data[0]}")
