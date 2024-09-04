@@ -63,7 +63,7 @@ class DataReader():
         original_val.update(kwargs)
         return self.__class__(**original_val)
 
-    def read_data_file(self) -> pa.Table:
+    def read(self) -> pa.Table:
         cat_schema = [(col, pa.string())
                       for col in self.ensure_categorical_cols]
         num_schema = [(col, pa.float32())
@@ -164,7 +164,7 @@ class DataReader():
             return {f'{sp}': file_path.with_name(f"{base_stem}_{sp}{suffix}")
                     for sp in split.keys()}
 
-        table = self.read_data_file()
+        table = self.read()
 
         data_size = table.num_rows
         ixs = np.arange(data_size)

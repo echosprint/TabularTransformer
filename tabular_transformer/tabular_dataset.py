@@ -68,7 +68,7 @@ class TabularDataset():
         self.validate_split = validate_split
 
         self.datareader = datareader
-        table = self.datareader.read_data_file()
+        table = self.datareader.read()
         self.label = self.datareader.label
         self.ensure_categorical_cols = self.datareader.ensure_categorical_cols
         self.ensure_numerical_cols = self.datareader.ensure_numerical_cols
