@@ -184,3 +184,5 @@ trainer.train(
 predictor = ttf.Predictor(checkpoint='out/fish_ckpt.pt')
 predictor.predict(data_reader=fish_data_reader(file_path=split['test']),
                   save_as="fish_predictions.csv")
+
+print(fish_data_reader)
