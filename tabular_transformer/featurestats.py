@@ -40,6 +40,14 @@ class FeatureStats:
     def vocab_size(self):
         return len(self.vocab)
 
+    @property
+    def label_cls_map(self):
+        if self.y_type == 'cat':
+            assert self.y_cls is not None
+            return {i: cls for i, cls in enumerate(self.y_cls)}
+        else:
+            return {}
+
     def __call__(self, **kwargs) -> 'FeatureStats':
         return replace(self, **kwargs)
 
