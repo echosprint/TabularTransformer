@@ -220,19 +220,12 @@ class DataReader():
 
     def __repr__(self):
         return (
-            "DataReader(\n"
-            "  file_path = '{file_path}',\n"
-            "  ensure_categorical_cols = {ensure_categorical_cols},\n"
-            "  ensure_numerical_cols = {ensure_numerical_cols},\n"
-            "  label = {label},\n"
-            "  header = {header},\n"
-            "  column_names = {column_names}\n"
-            ")"
-        ).format(
-            file_path=self.file_path,
-            ensure_categorical_cols=self.ensure_categorical_cols,
-            ensure_numerical_cols=self.ensure_numerical_cols,
-            label=f"'{self.label}'" if self.label is not None else None,
-            header=self.header,
-            column_names=self.column_names
+            f"DataReader(\n"
+            f"  file_path = '{self.file_path}',\n"
+            f"  ensure_categorical_cols = {self.ensure_categorical_cols},\n"
+            f"  ensure_numerical_cols = {self.ensure_numerical_cols},\n"
+            f"  label = {repr(self.label)},\n"
+            f"  header = {self.header},\n"
+            f"  column_names = {self.column_names}\n"
+            f")"
         )
