@@ -3,10 +3,9 @@ from typing import Literal, Optional
 import torch
 import pandas as pd
 from tabular_transformer.datareader import DataReader
-from tabular_transformer.preprocessor import normalize_data, power_transform, preprocess
+from tabular_transformer.featurestats import FeatureStats
+from tabular_transformer.tabular_dataset import TabularDataset
 from tabular_transformer.tabular_transformer import ModelArgs, TabularTransformer
-from tabular_transformer.tokenizer import Tokenizer
-from tabular_transformer.dataloader import load_data
 import random
 from tabular_transformer.util import LossType, TaskType
 import numpy as np
@@ -32,7 +31,6 @@ class Predictor:
 
     def predict(self,
                 data_reader: DataReader,
-                has_truth: bool = True,
                 batch_size: int = 1024,
                 save_as: Optional[str | Path] = None,
                 seed: int = 1337):
@@ -40,7 +38,7 @@ class Predictor:
         assert isinstance(data_reader, DataReader)
         self.data_reader = data_reader
         self.seed = seed
-        self.has_truth = has_truth
+        self.has_truth = True if self.data_reader.label is not None else False
         self.batch_size = batch_size
         self.save_as = save_as
         assert str(self.save_as).endswith('.csv'), \
@@ -52,7 +50,7 @@ class Predictor:
 
         self._init_model()
 
-        self._init_tokenizer_dataset()
+        self._init_dataset()
 
         self._predict()
 
@@ -110,72 +108,64 @@ class Predictor:
         self.model.eval()
         self.model.to(self.device)
 
-    def _init_tokenizer_dataset(self):
-        # load the tokenizer
-        self.enc = Tokenizer(self.dataset_attr['feature_vocab'],
-                             self.dataset_attr['feature_type'])
+    def _init_dataset(self):
 
         self.loss_type = LossType[self.model_args.loss_type]
         assert self.loss_type is not LossType.SUPCON, \
             "model trained with `SUPCON` loss cannnot be used to predict"
 
-        self.target_map = self.dataset_attr['target_map']
-        self.target_stats = self.dataset_attr['target_stats']
-        self.task_type = self.dataset_attr['task_type']
+        self.feature_stats: FeatureStats = self.dataset_attr['feature_stats']
+        self.task_type: TaskType = self.dataset_attr['task_type']
 
-        self.predict_map = {v: k for k, v in self.target_map.items()}
+        self.predict_map = self.feature_stats.label_cls_map
+        self.apply_power_transform = self.train_config['apply_power_transform']
 
-        predict_dataframe = self.data_reader.read_data_file()
+        self.dataset = TabularDataset(
+            datareader=self.data_reader,
+            device='cpu',
+            original_feature_stats=self.feature_stats,
+            min_cat_count=1,
+            apply_power_transform=self.apply_power_transform,
+            validate_split=0,
+            seed=42,
+        )
 
-        if self.has_truth:
-            self.dataset_x = predict_dataframe.iloc[:, :-1]
-            self.truth_y = predict_dataframe.iloc[:, -1]
-
-        else:
-            self.dataset_x = predict_dataframe
-            self.truth_y = None
-
-        assert self.dataset_x.shape[1] == self.dataset_attr['max_seq_len'], \
-            "dataset for prediction not compatible with trained model, " \
-            "maybe you forgot to set `has_truth` = False when call `predict` function"
+        self.dataset_x_tok = self.dataset.dataset_x_tok
+        self.dataset_x_val = self.dataset.dataset_x_val
+        self.truth_y = self.dataset.dataset_y
 
     def _predict(self):
 
-        self.logits_array = np.zeros(len(self.dataset_x), dtype=float)
+        self.logits_array = np.zeros(self.dataset_x_tok.size(0), dtype=float)
 
         # run generation
         with torch.no_grad():
             with self.ctx:
-                num_batches = (len(self.dataset_x) +
+                num_batches = (self.dataset_x_tok.size(0) +
                                self.batch_size - 1) // self.batch_size
                 for ix in range(num_batches):
                     # encode the beginning of the prompt
                     start = ix * self.batch_size
                     end = start + self.batch_size
 
-                    x = self.dataset_x[start: end]
+                    x_tok = self.dataset_x_tok[start: end]
+                    x_val = self.dataset_x_val[start: end]
 
-                    truth = self.truth_y[start: end] if self.truth_y is not None else None
-
-                    # preprocess the data
-                    xp = preprocess(self.rng,
-                                    x,
-                                    self.dataset_attr['feature_type'],
-                                    self.dataset_attr['feature_stats'],
-                                    self.train_config['apply_power_transform'],
-                                    self.train_config['remove_outlier'],
-                                    )
-                    tok_x = self.enc.encode(xp)
-                    feature_tokens = tok_x[0].to(
+                    feature_tokens = x_tok.long().to(
                         self.device, non_blocking=True)
-                    feature_weight = tok_x[1].to(
+                    feature_weight = x_val.to(
                         self.device, non_blocking=True)
 
-                    truth_tok = self._preprocess_target(truth) \
-                        if truth is not None else None
+                    if self.truth_y is not None:
+                        truth = self.truth_y[start: end]
+                        truth = truth if torch.is_floating_point(
+                            truth) else truth.long()
+                        truth = truth.to(self.device, non_blocking=True)
+                    else:
+                        truth = None
 
                     logits, loss = self.model.predict(
-                        (feature_tokens, feature_weight), truth_tok)
+                        (feature_tokens, feature_weight), truth)
 
                     if loss is not None:
                         self.p_loss.append(loss.item())
@@ -197,11 +187,8 @@ class Predictor:
                         self.p_pred.append(mul_predict.to('cpu').numpy())
 
                     elif self.loss_type is LossType.MSE:
-                        u_logits = logits.float() * self.target_stats.logstd + self.target_stats.logmean
-                        reg_predict = torch.where(u_logits > 0,
-                                                  torch.expm1(u_logits), -torch.expm1(-u_logits))
-
-                        self.p_pred.append(reg_predict.to(
+                        itrans_logits = self._inverse_transform(logits)
+                        self.p_pred.append(itrans_logits.to(
                             'cpu', dtype=torch.float32).numpy())
 
     def _post_process(self):
@@ -236,8 +223,7 @@ class Predictor:
 
     def _process_bin(self):
 
-        truth_y = self.truth_y.map(
-            lambda x: self.target_map[x]).to_numpy()
+        truth_y = self.truth_y.cpu().numpy()
 
         bce_loss = self.losses
         print(f"binary cross entropy loss: {bce_loss:.6f}")
@@ -253,8 +239,7 @@ class Predictor:
               f"accuracy: {accuracy:.4f}")
 
     def _process_mul(self):
-        truth_y = self.truth_y.map(
-            lambda x: self.target_map[x]).to_numpy()
+        truth_y = self.truth_y.cpu().numpy()
 
         ce_loss = self.losses
         print(f"cross entropy loss: {ce_loss:.6f}")
@@ -272,31 +257,29 @@ class Predictor:
         print(f"samples: {len(truth_y)}, "
               f"accuracy: {accuracy:.4f}")
 
+    def _inverse_transform(self, logits):
+        mean, std, mean_log, std_log = self.feature_stats.y_num_stats
+        if self.apply_power_transform:
+            u_logits = logits.float() * (std_log + 1e-8) + mean_log
+            rev_logits = torch.where(u_logits > 0,
+                                     torch.expm1(u_logits), -torch.expm1(-u_logits))
+        else:
+            rev_logits = logits.float() * (std + 1e-8) + mean
+        return rev_logits
+
     def _process_mse(self):
-        truth_y = self.truth_y.to_numpy()
+        truth_y = self._inverse_transform(self.truth_y).cpu().numpy()
 
         log_mse_loss = self.losses
-        print(f"mse loss of normalized log1p(y): {log_mse_loss:.6f}")
+        mse_loss_str = "MSE loss of normalized log1p(y)" \
+            if self.apply_power_transform else "mse loss of normalized y"
+        print(f"{mse_loss_str}: {log_mse_loss:.6f}")
 
         mape = calMAPE(truth_y, self.predict_results)
         print(f"mean absolute percentage error: {mape:.4f}")
 
         rmse = calRMSE(truth_y, self.predict_results)
         print(f"root mean square error: {rmse:.4f}")
-
-    def _preprocess_target(self, truth):
-        if self.task_type is TaskType.REGRESSION:
-            truth_tok = truth.map(lambda x: normalize_data(
-                power_transform(x),
-                self.target_stats.logmean,
-                self.target_stats.logstd))
-            target_dtype = torch.float32
-        else:
-            truth_tok = truth.map(lambda x: self.target_map[x])
-            target_dtype = torch.long
-        truth_tok_tensor = torch.tensor(
-            truth_tok.to_numpy(), dtype=target_dtype).squeeze()
-        return truth_tok_tensor.to(self.device, non_blocking=True)
 
     def _save_output(self):
         output_dir = Path(self.train_config['out_dir'])
