@@ -34,7 +34,6 @@ Here we take [Adult Income dataset](https://huggingface.co/datasets/scikit-learn
 import tabular_transformer as ttf
 import torch
 
-# download the dataset
 income_dataset_path = ttf.prepare_income_dataset()
 
 categorical_cols = [
