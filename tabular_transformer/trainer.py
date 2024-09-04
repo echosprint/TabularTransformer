@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Literal, Optional, Union
 from tabular_transformer.featurestats import FeatureStats
 from tabular_transformer.tabular_dataset import TabularDataset
 from tabular_transformer.tabular_loader import Task
-from tabular_transformer.util import FeatureType, LossType, TaskType, equals_except
+from tabular_transformer.util import LossType, TaskType, equals_except
 from tabular_transformer.tabular_transformer import TabularTransformer
 from tabular_transformer.hyperparameters import HyperParameters, TrainParameters, TrainSettings, ModelArgs
 from tabular_transformer.datareader import DataReader

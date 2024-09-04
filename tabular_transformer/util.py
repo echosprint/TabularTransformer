@@ -21,11 +21,6 @@ class LossType(Enum):
     SUPCON = 4
 
 
-class FeatureType(Enum):
-    CATEGORICAL = 1
-    NUMERICAL = 2
-
-
 def split_data_with_train_validate(datafile, validate_split=0.1, test_split=0):
     # Read the CSV file into a DataFrame
     df = pd.read_csv(f"./data/{datafile}.csv")
