@@ -273,14 +273,14 @@ class Trainer:
                     else f"lr/t {current_lr['lr/transformer']:e} | lr/o {current_lr['lr/output']:e}"
                 epochs = iter_num / iters_per_epoch
                 print(
-                    f"{iter_num} | epoch {epochs:.2f} | loss {lossf:.4f} |"
+                    f"{iter_num} | epoch {epochs:.4f} | loss {lossf:.4f} |"
                     f"{lr_str} |{dt*1000: .2f}ms | mfu {running_mfu*100: .2f}%"
                 )
 
-            if iter_num >= self.tp.max_iters:
-                break
-
             iter_num += 1
+
+            if iter_num > self.tp.max_iters:
+                break
 
     def _log(self, wandb, iter_num, losses, lr, running_mfu):
         try:
@@ -304,7 +304,8 @@ class Trainer:
             "iter_num": iter_num,
             "best_val_loss": best_val_loss,
             "config": config,
-            "features": self.merged_feature_stats,
+            "features": {"feature_stats": self.merged_feature_stats,
+                         "task_type": self.task_type},
         }
         print(f"saving checkpoint to {self.ts.out_dir}")
         torch.save(save_checkpoint, os.path.join(
@@ -363,8 +364,8 @@ class Trainer:
 
     def _create_dataset(self):
         if self.resume:
-            self.original_feature_stats = copy.deepcopy(
-                self.checkpoint['features'])
+            features = copy.deepcopy(self.checkpoint['features'])
+            self.original_feature_stats = features['feature_stats']
             if self.replace_output_head:
                 self.original_feature_stats = self.original_feature_stats.reset_y_stats()
         else:
