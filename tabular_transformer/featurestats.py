@@ -81,7 +81,7 @@ class FeatureStats:
             f"    x_col_type=[\n        {x_col_type_str}\n    ],\n"
             f"    x_cls_dict={{\n        {x_cls_dict_str}\n    }},\n"
             f"    x_num_stats={{\n        {x_num_stats_str}\n    }},\n"
-            f"    y_type={self.y_type if self.y_type is None else f'\'{self.y_type}\''},\n"  # noqa: E501
+            f"    y_type={repr(self.y_type)},\n"  # noqa: E501
             f"    y_cls={self.y_cls},\n"
             f"    y_num_stats={[round(elem, 4) for elem in self.y_num_stats] if self.y_num_stats is not None else None},\n"  # noqa: E501
             f")"
