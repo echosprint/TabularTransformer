@@ -106,6 +106,8 @@ class TabularDataset():
     def extract_table(self, table):
         if self.label is None:
             return table, None
+        assert self.label in table.column_names, \
+            f"`label` '{self.label}' not exists"
         column_x = [
             col for col in table.column_names if col != self.label]
         column_y = [self.label]

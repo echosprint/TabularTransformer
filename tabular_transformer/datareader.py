@@ -85,6 +85,10 @@ class DataReader():
 
         table_col_names = table.column_names
         print(f"dataset column names: {table_col_names}")
+
+        assert self.label is None or self.label in table_col_names, \
+            f"`label` '{self.label}' not exists in table column names."
+
         assert self.column_names is None or self.column_names == table_col_names, \
             f"`column_names` not right. Mismatched columns: \
                 {set(self.column_names) ^ set(table_col_names)}"
