@@ -24,7 +24,7 @@ $ pip install tabular-transformer
 
 ### Usage
 
-Here we use [Adult Income dataset](https://huggingface.co/datasets/scikit-learn/adult-census-income) as an example to show the usage of `tabular_transformer` package, more examples see the [notebooks](https://github.com/echosprint/TabularTransformer/tree/main/notebooks) folder in this repo.
+Here we take [Adult Income dataset](https://huggingface.co/datasets/scikit-learn/adult-census-income) as an example to show the usage of `tabular_transformer` package, more examples see the [notebooks](https://github.com/echosprint/TabularTransformer/tree/main/notebooks) folder in this repo.
 
  <a target="_blank" href="https://colab.research.google.com/github/echosprint/TabularTransformer/blob/main/notebooks/supervised_training.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
@@ -32,25 +32,29 @@ Here we use [Adult Income dataset](https://huggingface.co/datasets/scikit-learn/
 
 ```python
 import tabular_transformer as ttf
-import pandas as pd
 import torch
 
 # download the dataset
 income_dataset_path = ttf.prepare_income_dataset()
 
-class IncomeDataReader(ttf.DataReader):
-    # make sure interpret columns correctly 
-    ensure_categorical_cols = []
-    ensure_numerical_cols = []
+categorical_cols = [
+    'workclass', 'education',
+    'marital.status', 'occupation',
+    'relationship', 'race', 'sex',
+    'native.country', 'income']
 
-    # load data 
-    def read_data_file(self, file_path):
-        df = pd.read_csv(file_path)
-        return df
+numerical_cols = [
+    'age', 'fnlwgt', 'education.num',
+    'capital.gain', 'capital.loss',
+    'hours.per.week']
 
-income_reader = IncomeDataReader(income_dataset_path)
+income_reader = ttf.DataReader(
+    file_path=income_dataset_path,
+    ensure_categorical_cols=categorical_cols,
+    ensure_numerical_cols=numerical_cols,
+    label='income',
+)
 
-# split 20% as `test`, rest of as `train`
 split = income_reader.split_data({'test': 0.2, 'train': -1})
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -59,23 +63,23 @@ dtype = 'bfloat16' if torch.cuda.is_available() \
 
 ts = ttf.TrainSettings(device=device, dtype=dtype)
 
-tp = ttf.TrainParameters(train_epochs=15, learning_rate=5e-4,
+tp = ttf.TrainParameters(max_iters=3000, learning_rate=5e-4,
                          batch_size=128, eval_interval=100,
                          eval_iters=20, warmup_iters=100,
-                         validate_split=0.2)
+                         validate_split=0.2, output_checkpoint='ckpt.pt')
 
 hp = ttf.HyperParameters(dim=64, n_layers=6)
 
-# use `HyperParameters` and `TrainSettings` to construct `Trainer`
 trainer = ttf.Trainer(hp=hp, ts=ts)
-# use split `train` to train with `TrainParameters`
-trainer.train(data_reader=IncomeDataReader(split['train']), tp=tp)
 
-# load Pytorch checkpoint
+trainer.train(
+    data_reader=income_reader(file_path=split['train']),
+    tp=tp)
+
 predictor = ttf.Predictor(checkpoint='out/ckpt.pt')
-# use split `test` to predict
+
 predictor.predict(
-    data_reader=IncomeDataReader(split['test']),
+    data_reader=income_reader(file_path=split['test']),
     save_as="prediction_income.csv"
 )
 ```
