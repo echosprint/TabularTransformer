@@ -218,7 +218,6 @@ class DataReader():
             start = end
         return fpath
 
-    # def __str__(self):
     def __repr__(self):
         datareader = (
             "DataReader(\n"
