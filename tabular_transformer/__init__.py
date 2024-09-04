@@ -2,6 +2,7 @@ from tabular_transformer.hyperparameters import HyperParameters, TrainParameters
 from tabular_transformer.tabular_transformer import TabularTransformer
 from tabular_transformer.datareader import DataReader
 from tabular_transformer.featurestats import FeatureStats
+from tabular_transformer.predictor import Predictor
 from tabular_transformer.trainer import Trainer
 from tabular_transformer.util import (
     prepare_income_dataset,
