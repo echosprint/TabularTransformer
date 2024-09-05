@@ -167,9 +167,10 @@ class Trainer:
         self.model.to(self.ts.device)
 
         # initialize a GradScaler. If enabled=False scaler is a no-op
-        scaler = torch.cuda.amp.GradScaler(
-            enabled=(self.ts.dtype == "float16"))
-
+        # scaler = torch.cuda.amp.GradScaler(
+        #     enabled=(self.ts.dtype == "float16"))
+        scaler = torch.amp.GradScaler(
+            'cuda', enabled=(self.ts.dtype == "float16"))
         # optimizer
         self.optimizer = self._configure_optimizers(
             self.hp.weight_decay, (self.hp.beta1, self.hp.beta2), self.device_type)
@@ -404,7 +405,11 @@ class Trainer:
     def _load_checkpoint(self):
         ckpt_path = os.path.join(
             self.ts.out_dir, self.input_checkpoint)
-        self.checkpoint = torch.load(ckpt_path, map_location=self.ts.device)
+        self.checkpoint = torch.load(
+            ckpt_path,
+            map_location=self.ts.device,
+            weights_only=False
+        )
 
     def _init_dataloader(self):
         # task-specific setup

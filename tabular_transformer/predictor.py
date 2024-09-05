@@ -87,7 +87,10 @@ class Predictor:
     def _load_checkpoint(self):
         # init from a model saved in a specific directory
         checkpoint_dict = torch.load(
-            self.checkpoint, map_location=self.device)
+            self.checkpoint,
+            map_location=self.device,
+            weights_only=False,
+        )
         print(f"load checkpoint from {self.checkpoint}")
         self.checkpoint_dict = checkpoint_dict
         self.dataset_attr = checkpoint_dict['features']
