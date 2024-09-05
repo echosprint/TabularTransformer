@@ -63,9 +63,10 @@ dtype = 'bfloat16' if torch.cuda.is_available() \
 ts = ttf.TrainSettings(device=device, dtype=dtype)
 
 tp = ttf.TrainParameters(max_iters=3000, learning_rate=5e-4,
+                         output_dim=1, loss_type='BINCE',
                          batch_size=128, eval_interval=100,
                          eval_iters=20, warmup_iters=100,
-                         validate_split=0.2, output_checkpoint='ckpt.pt')
+                         validate_split=0.2)
 
 hp = ttf.HyperParameters(dim=64, n_layers=6)
 
