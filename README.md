@@ -96,7 +96,7 @@ We used [Higgs](https://archive.ics.uci.edu/dataset/280/higgs) dataset to conduc
 We computed accuracy metric only on the test data set. check [benchmark source](https://github.com/microsoft/LightGBM/blob/master/docs/Experiments.rst#accuracy).
 | Data  | Metric | XGBoost | XGBoost_Hist | LightGBM       | TabularTransformer |
 |-------|--------|---------|--------------|----------------|--------------------|
-| Higgs | AUC    | 0.839593| 0.845314     | 0.845724       | **0.849464**       |
+| Higgs | AUC    | 0.839593| 0.845314     | 0.845724       | **0.848628**       |
 
 To reproduce the result, please check the [source code](https://github.com/echosprint/TabularTransformer/blob/main/notebooks/higgs_classification.ipynb)
 
