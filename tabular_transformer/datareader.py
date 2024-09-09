@@ -80,7 +80,9 @@ class DataReader():
             )
         else:
             table = parquet.read_table(self.file_path)
-            table = table.cast(schema)
+            reordered_schema = pa.schema(
+                [schema.field(col) for col in table.column_names])
+            table = table.cast(reordered_schema)
         print('read file completed.')
 
         table_col_names = table.column_names
