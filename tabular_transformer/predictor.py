@@ -12,6 +12,7 @@ import numpy as np
 from tabular_transformer.metrics import calAUC, calAccuracy, calF1Macro, calMAPE, calRMSE
 from pathlib import Path
 import torch.nn.functional as F
+from tqdm import tqdm
 
 
 class Predictor:
@@ -146,7 +147,7 @@ class Predictor:
             with self.ctx:
                 num_batches = (self.dataset_x_tok.size(0) +
                                self.batch_size - 1) // self.batch_size
-                for ix in range(num_batches):
+                for ix in tqdm(range(num_batches)):
                     # encode the beginning of the prompt
                     start = ix * self.batch_size
                     end = start + self.batch_size
