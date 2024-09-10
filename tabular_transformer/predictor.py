@@ -198,18 +198,24 @@ class Predictor:
 
         self.predict_results = np.concatenate(self.p_pred, axis=0)
 
-        self.predict_results_output = pd.DataFrame(
-            self.predict_results,
-            columns=['prediction_outputs']
-        )
+        self.probs = np.concatenate(self.p_prob, axis=0) \
+            if len(self.p_prob) > 0 else None
+
+        result = {'prediction': self.predict_results}
+        probs_dict = {}
+        if self.probs is not None:
+            if len(self.probs.shape) == 1:
+                probs_dict = {'probability': self.probs}
+            else:
+                probs_dict = {f'prob_{i}': self.probs[:, i]
+                              for i in range(self.probs.shape[1])}
+
+        self.predict_results_output = pd.DataFrame(result | probs_dict)
 
         if self.task_type is not TaskType.REGRESSION:
-            self.probs = np.concatenate(self.p_prob, axis=0)
-            self.predict_results_output['prediction_outputs'] = \
-                self.predict_results_output['prediction_outputs'].apply(
+            self.predict_results_output['prediction'] = \
+                self.predict_results_output['prediction'].apply(
                     lambda x: self.predict_map[x])
-        else:
-            self.probs = None
 
         if self.has_truth:
 
