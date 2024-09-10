@@ -190,7 +190,8 @@ class Predictor:
                         self.p_pred.append(mul_predict.to('cpu').numpy())
 
                     elif self.loss_type is LossType.MSE:
-                        itrans_logits = self._inverse_transform(logits)
+                        itrans_logits = self._inverse_transform(
+                            logits.squeeze(-1))
                         self.p_pred.append(itrans_logits.to(
                             'cpu', dtype=torch.float32).numpy())
 
