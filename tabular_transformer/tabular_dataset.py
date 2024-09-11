@@ -16,6 +16,8 @@ class TabularDataset():
 
     seed: Optional[int]
 
+    id: Optional[np.ndarray]
+
     min_cat_count: int
     task_type: Optional[TaskType]
     n_class: Optional[int]
@@ -84,6 +86,7 @@ class TabularDataset():
 
         table_x, table_y = self.extract_table(table)
 
+        table_x = self.mask_id_column(table_x)
         self.stat_col_type_x(table_x)
         self.stat_cat_cls_x(table_x)
         tok_tensor, val_tensor = self.process_table_x(table_x)
@@ -113,6 +116,20 @@ class TabularDataset():
         column_y = [self.label]
         return table.select(column_x), table.select(column_y)
 
+    def mask_id_column(self, table: pa.Table):
+        id = self.datareader.id
+        if id is None:
+            self.id = None
+            return table
+
+        self.id = table.column(id).to_numpy()
+
+        mask_id_col = pa.array(np.full(self.num_rows, 'mask_id'))
+
+        mask_id_table = table.set_column(
+            table.column_names.index(id), id, mask_id_col)
+        return mask_id_table
+
     def stat_cat_cls_x(self, table):
 
         if self.original_feature_stats is not None:
@@ -136,7 +153,7 @@ class TabularDataset():
                 valid_cls = list(valid_cls_counts.keys())
 
                 assert len(valid_cls) > 0, \
-                    f"no class in col {col} satisfies `min_cat_count`"
+                    f"no class in col `{col}` satisfies `min_cat_count`"
 
                 cls_dict[col] = valid_cls
         self.feature_stats = self.feature_stats(x_cls_dict=cls_dict)

@@ -137,6 +137,8 @@ class Predictor:
         self.dataset_x_tok = self.dataset.dataset_x_tok
         self.dataset_x_val = self.dataset.dataset_x_val
         self.truth_y = self.dataset.dataset_y
+        self.id = self.dataset.id
+        self.id_name = self.data_reader.id
 
     def _predict(self):
 
@@ -202,7 +204,7 @@ class Predictor:
 
         self.probs = np.concatenate(self.p_prob, axis=0) \
             if len(self.p_prob) > 0 else None
-
+        id_seq = {} if self.id is None else {self.id_name: self.id}
         result = {'prediction': self.predict_results}
         probs_dict = {}
         if self.probs is not None:
@@ -212,7 +214,8 @@ class Predictor:
                 probs_dict = {f'prob_{i}': self.probs[:, i]
                               for i in range(self.probs.shape[1])}
 
-        self.predict_results_output = pd.DataFrame(result | probs_dict)
+        self.predict_results_output = pd.DataFrame(
+            id_seq | result | probs_dict)
 
         if self.task_type is not TaskType.REGRESSION:
             self.predict_results_output['prediction'] = \

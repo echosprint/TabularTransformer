@@ -15,6 +15,7 @@ class DataReader():
     ensure_categorical_cols: List[str]
     ensure_numerical_cols: List[str]
     label: Optional[str]
+    id: Optional[str]
     header: bool
     column_names: Optional[List[str]]
     file_type: Literal['csv', 'parquet']
@@ -24,6 +25,7 @@ class DataReader():
                  ensure_categorical_cols: List[str],
                  ensure_numerical_cols: List[str],
                  label: Optional[str],
+                 id: Optional[str] = None,
                  header: bool = True,
                  column_names: Optional[List[str]] = None):
         self.file_path = Path(file_path)
@@ -31,6 +33,10 @@ class DataReader():
 
         self.column_names = column_names
         self.label = label
+        self.id = id
+        assert self.id is None or self.id != self.label
+        assert self.id is None or self.id in ensure_categorical_cols, \
+            f"id column `{id}` must be `categorical`"
 
         self.ensure_categorical_cols = ensure_categorical_cols
         self.ensure_numerical_cols = ensure_numerical_cols
@@ -108,6 +114,9 @@ class DataReader():
         assert set(self.ensure_categorical_cols + self.ensure_numerical_cols) == set(table_col_names), \
             f"all columns must be set either in `ensure_categorical_cols` or `ensure_numerical_cols`, missing cols: \
                {set(table_col_names) - set(self.ensure_categorical_cols + self.ensure_numerical_cols)}"
+
+        assert self.id is None or self.id in self.column_names, \
+            f"id column `{self.id}` not exists."
 
         return table
 
@@ -227,6 +236,7 @@ class DataReader():
             f"  ensure_categorical_cols = {self.ensure_categorical_cols},\n"
             f"  ensure_numerical_cols = {self.ensure_numerical_cols},\n"
             f"  label = {repr(self.label)},\n"
+            f"  id = {repr(self.id)},\n"
             f"  header = {self.header},\n"
             f"  column_names = {self.column_names}\n"
             f")"
