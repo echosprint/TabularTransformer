@@ -71,6 +71,8 @@ class TabularDataset():
 
         self.datareader = datareader
         table = self.datareader.read()
+        table = self.drop_id_column(table)
+
         self.label = self.datareader.label
         self.ensure_categorical_cols = self.datareader.ensure_categorical_cols
         self.ensure_numerical_cols = self.datareader.ensure_numerical_cols
@@ -86,7 +88,6 @@ class TabularDataset():
 
         table_x, table_y = self.extract_table(table)
 
-        table_x = self.mask_id_column(table_x)
         self.stat_col_type_x(table_x)
         self.stat_cat_cls_x(table_x)
         tok_tensor, val_tensor = self.process_table_x(table_x)
@@ -116,19 +117,14 @@ class TabularDataset():
         column_y = [self.label]
         return table.select(column_x), table.select(column_y)
 
-    def mask_id_column(self, table: pa.Table):
+    def drop_id_column(self, table: pa.Table):
         id = self.datareader.id
         if id is None:
             self.id = None
             return table
-
         self.id = table.column(id).to_numpy()
-
-        mask_id_col = pa.array(np.full(self.num_rows, 'mask_id'))
-
-        mask_id_table = table.set_column(
-            table.column_names.index(id), id, mask_id_col)
-        return mask_id_table
+        drop_id_table = table.drop([id])
+        return drop_id_table
 
     def stat_cat_cls_x(self, table):
 
