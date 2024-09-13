@@ -3,7 +3,7 @@ name: Version Check and Tag
 on:
   push:
     paths:
-      - "setup.py"  # Only trigger on changes to setup.py
+      - "do not work --- setup.py"  # Only trigger on changes to setup.py
 
 jobs:
   check-version:
