@@ -160,6 +160,7 @@ class DataReader():
     def split_data(self, split: Dict[str, float | int],
                    seed: Optional[int] = 1337,
                    override: bool = True,
+                   output_path: Optional[Path | str] = None,
                    save_as: Literal['csv', 'csv.gz', 'parquet'] = 'csv') -> Dict[str, Path]:
 
         assert isinstance(split, dict), "`split` must be Dict[str, float|int]"
@@ -168,12 +169,21 @@ class DataReader():
         file_path: Path = self.file_path
         base_stem = file_path.stem.split('.')[0]
         suffix = f".{save_as}"
-        if all(file_path.with_name(f"{base_stem}_{sp}{suffix}").exists()
+
+        output_path = file_path.parent \
+            if output_path is None else Path(output_path)
+
+        if not output_path.exists():
+            output_path.mkdir(parents=True)
+
+        split_path = {sp: output_path / (f"{base_stem}_{sp}{suffix}")
+                      for sp in split.keys()}
+
+        if all(split_path[sp].exists()
                for sp in split.keys()) \
                 and not override:
             print("splits already exists, skip split.")
-            return {f'{sp}': file_path.with_name(f"{base_stem}_{sp}{suffix}")
-                    for sp in split.keys()}
+            return split_path
 
         table = self.read()
 
@@ -185,7 +195,6 @@ class DataReader():
             rng.shuffle(ixs)
 
         start = 0
-        fpath = {}
 
         for sp, ratio in sorted(split.items(), key=lambda kv: -kv[1]):
             assert isinstance(ratio, (float, int))
@@ -204,7 +213,7 @@ class DataReader():
             data_part = table.take(ixs[start: end])
             print(f'split: {sp}, n_samples: {part_len}')
 
-            part_path = file_path.with_name(f"{base_stem}_{sp}{suffix}")
+            part_path = split_path[sp]
 
             if part_path.exists() and override:
                 os.remove(part_path)
@@ -225,9 +234,8 @@ class DataReader():
             else:
                 print(f"{part_path} *exists*, skip split `{sp}`")
 
-            fpath[f'{sp}'] = part_path
             start = end
-        return fpath
+        return split_path
 
     def __repr__(self):
         return (
