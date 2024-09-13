@@ -42,7 +42,7 @@ class Predictor:
         self.has_truth = True if self.data_reader.label is not None else False
         self.batch_size = batch_size
         self.save_as = save_as
-        assert str(self.save_as).endswith('.csv'), \
+        assert self.save_as is None or str(self.save_as).endswith('.csv'), \
             "only support save as .csv file"
 
         self._initialize()
