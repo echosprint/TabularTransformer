@@ -1,0 +1,44 @@
+name: Version Check and Tag
+
+on:
+  push:
+    paths:
+      - "setup.py"  # Only trigger on changes to setup.py
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+
+    - name: Extract version from setup.py
+      id: get_version
+      run: |
+        # Extract the version from setup.py
+        VERSION=$(python setup.py --version)
+        echo "Detected version: $VERSION"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+    - name: Check if version has changed
+      id: check_version
+      run: |
+        # Compare current version tag with setup.py version
+        TAG=$(git describe --tags --abbrev=0)
+        if [[ "$TAG" == "v$VERSION" ]]; then
+          echo "Version is already tagged. Exiting."
+          exit 0
+        fi
+        echo "Version has changed. Ready to create a new tag."
+
+    - name: Create new tag
+      if: steps.check_version.outcome == 'success'
+      run: |
+        git tag v${{ env.VERSION }}
+        git push origin v${{ env.VERSION }}
