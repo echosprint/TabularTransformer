@@ -60,6 +60,8 @@ class Predictor:
         if self.save_as is not None:
             self._save_output()
 
+        return self.predict_results_output
+
     def _initialize(self):
         # examples: 'cpu', 'cuda', 'cuda:0', 'cuda:1', etc.
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
