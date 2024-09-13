@@ -99,3 +99,18 @@ nbconvert:
 clean:
 	@echo "Cleaning up..."
 	rm -rf __pycache__
+	
+VERSION=$(shell python setup.py --version)
+
+.PHONY: version
+
+version:
+	@NEW_VERSION=$$(echo $(VERSION) | awk -F. '{print $$1"."$$2"."$$3+1}'); \
+	echo "new version: $$NEW_VERSION"; \
+	echo "s/version='$(VERSION)'/version='$$NEW_VERSION'/g"; \
+	sed -i "s/version='$(VERSION)'/version='$$NEW_VERSION'/g" setup.py; \
+	git add setup.py; \
+	git commit -m "version $$NEW_VERSION"; \
+	git push; \
+	git tag v$$NEW_VERSION; \
+	git push --tags 
