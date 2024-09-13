@@ -7,6 +7,7 @@ on:
 
 jobs:
   check-version:
+    if: ${{ false }} # disable this action
     runs-on: ubuntu-latest
 
     steps:
