@@ -92,7 +92,7 @@ class DataReader():
         print('read file completed.')
 
         table_col_names = table.column_names
-        print(f"dataset column names: {table_col_names}")
+        # print(f"dataset column names: {table_col_names}")
 
         assert self.label is None or self.label in table_col_names, \
             f"`label` '{self.label}' not exists in table column names."
@@ -101,7 +101,7 @@ class DataReader():
             f"`column_names` not right. Mismatched columns: \
                 {set(self.column_names) ^ set(table_col_names)}"
 
-        self.column_names = table_col_names if self.column_names is None else self.column_names
+        self.column_names = table_col_names
 
         assert set(self.ensure_categorical_cols).issubset(set(table_col_names)), \
             f"cols specified in `ensure_categorical_cols` not exist in column_names: \
