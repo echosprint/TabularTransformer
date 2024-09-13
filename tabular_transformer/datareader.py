@@ -22,29 +22,35 @@ class DataReader():
 
     def __init__(self,
                  file_path: Union[str, Path],
-                 ensure_categorical_cols: List[str],
-                 ensure_numerical_cols: List[str],
-                 label: Optional[str],
+                 ensure_categorical_cols: List[str] = [],
+                 ensure_numerical_cols: List[str] = [],
+                 label: Optional[str] = None,
                  id: Optional[str] = None,
                  header: bool = True,
                  column_names: Optional[List[str]] = None):
         self.file_path = Path(file_path)
         self._check_file_types()
 
-        self.column_names = column_names
-        self.label = label
-        self.id = id
-        assert self.id is None or self.id != self.label
-        assert self.id is None or self.id in ensure_categorical_cols, \
-            f"id column `{id}` must be `categorical`"
-
-        self.ensure_categorical_cols = ensure_categorical_cols
-        self.ensure_numerical_cols = ensure_numerical_cols
-        self._check_cat_num_cols()
-
         assert header or column_names is not None, \
             "if no header in data file, you must denfine `column_names`"
         self.header = header
+
+        self.column_names = column_names \
+            if column_names is not None else self._get_column_names()
+
+        self._check_cat_num_cols(
+            ensure_categorical_cols,
+            ensure_numerical_cols
+        )
+
+        self.label = label
+        assert self.label is None or self.label in self.column_names, \
+            f"`label` '{self.label}' not exists in table column names."
+
+        self.id = id
+        assert self.id is None or self.id != self.label
+        assert self.id is None or self.id in self.ensure_categorical_cols, \
+            f"id column `{id}` must be `categorical`"
 
     def __call__(self, **kwargs):
         sig = inspect.signature(self.__init__)
@@ -91,37 +97,14 @@ class DataReader():
             table = table.cast(reordered_schema)
         print('read file completed.')
 
-        table_col_names = table.column_names
-        # print(f"dataset column names: {table_col_names}")
-
-        assert self.label is None or self.label in table_col_names, \
-            f"`label` '{self.label}' not exists in table column names."
-
-        assert self.column_names is None or self.column_names == table_col_names, \
+        assert self.column_names == table.column_names, \
             f"`column_names` not right. Mismatched columns: \
-                {set(self.column_names) ^ set(table_col_names)}"
-
-        self.column_names = table_col_names
-
-        assert set(self.ensure_categorical_cols).issubset(set(table_col_names)), \
-            f"cols specified in `ensure_categorical_cols` not exist in column_names: \
-            {set(self.ensure_categorical_cols) - set(table_col_names)}"
-
-        assert set(self.ensure_numerical_cols).issubset(set(table_col_names)), \
-            f"cols specified in `ensure_numerical_cols` not exist in column_names: \
-            {set(self.ensure_numerical_cols) - set(table_col_names)}"
-
-        assert set(self.ensure_categorical_cols + self.ensure_numerical_cols) == set(table_col_names), \
-            f"all columns must be set either in `ensure_categorical_cols` or `ensure_numerical_cols`, missing cols: \
-               {set(table_col_names) - set(self.ensure_categorical_cols + self.ensure_numerical_cols)}"
-
-        assert self.id is None or self.id in self.column_names, \
-            f"id column `{self.id}` not exists."
+                {set(self.column_names) ^ set(table.column_names)}"
 
         return table
 
     def _check_file_types(self):
-        if self.file_path.suffix == '.csv' or self.file_path.suffixes == ['.csv', '.gz']:
+        if self.file_path.suffix == '.csv' or self.file_path.suffixes[0] == '.csv':
             self.file_type = 'csv'
         elif self.file_path.suffix == '.parquet':
             self.file_type = 'parquet'
@@ -129,17 +112,45 @@ class DataReader():
             raise ValueError(
                 "DataReader only support file type with extension: `csv`, `csv.gz`, `parquet`")
 
-    def _check_cat_num_cols(self):
-        assert isinstance(self.ensure_numerical_cols, list) \
-            and (len(self.ensure_numerical_cols) == 0
-                 or all(isinstance(e, str) and len(e.strip()) > 0
-                        for e in self.ensure_numerical_cols)), \
+    def _get_column_names(self):
+        if self.file_type == 'csv':
+            with csv.open_csv(self.file_path) as reader:
+                schema = reader.schema
+                column_names = schema.names
+        else:
+            parquet_file = parquet.ParquetFile(self.file_path)
+            column_names = parquet_file.schema.names
+        return column_names
+
+    def _check_cat_num_cols(self,
+                            ensure_categorical_cols,
+                            ensure_numerical_cols):
+
+        assert isinstance(ensure_categorical_cols, list)
+        assert isinstance(ensure_numerical_cols, list)
+
+        assert len(ensure_categorical_cols) > 0 or len(ensure_numerical_cols) > 0, \
+            "`ensure_categorical_cols`, `ensure_numerical_cols` cannot both be empty. "
+
+        if len(ensure_categorical_cols) == 0:
+            ensure_categorical_cols = [
+                col for col in self.column_names if col not in ensure_numerical_cols]
+
+        if len(ensure_numerical_cols) == 0:
+            ensure_numerical_cols = [
+                col for col in self.column_names if col not in ensure_categorical_cols]
+
+        self.ensure_categorical_cols = ensure_categorical_cols
+        self.ensure_numerical_cols = ensure_numerical_cols
+
+        assert (len(self.ensure_numerical_cols) == 0
+                or all(isinstance(e, str) and len(e.strip()) > 0
+                       for e in self.ensure_numerical_cols)), \
             "`ensure_numerical_cols` must be list of column names"
 
-        assert isinstance(self.ensure_categorical_cols, list) \
-            and (len(self.ensure_categorical_cols) == 0
-                 or all(isinstance(e, str) and len(e.strip()) > 0
-                        for e in self.ensure_categorical_cols)), \
+        assert (len(self.ensure_categorical_cols) == 0
+                or all(isinstance(e, str) and len(e.strip()) > 0
+                       for e in self.ensure_categorical_cols)), \
             "`ensure_categorical_cols` must be list of column names"
 
         numerical_set = set(self.ensure_numerical_cols)
@@ -148,14 +159,18 @@ class DataReader():
         assert len(common_set) == 0, \
             f"""{list(common_set)}
                       both in the ensure_numerical_cols and ensure_categorical_cols"""
-        if self.column_names is not None:
-            assert set(self.ensure_categorical_cols).issubset(set(self.column_names)), \
-                f"cols specified in `ensure_categorical_cols` not exist in column_names: \
-            {set(self.ensure_categorical_cols) - set(self.column_names)}"
 
-            assert set(self.ensure_numerical_cols).issubset(set(self.column_names)), \
-                f"cols specified in `ensure_numerical_cols` not exist in column_names: \
-            {set(self.ensure_numerical_cols) - set(self.column_names)}"
+        assert set(self.ensure_categorical_cols).issubset(set(self.column_names)), \
+            f"cols specified in `ensure_categorical_cols` not exist in column_names: \
+        {set(self.ensure_categorical_cols) - set(self.column_names)}"
+
+        assert set(self.ensure_numerical_cols).issubset(set(self.column_names)), \
+            f"cols specified in `ensure_numerical_cols` not exist in column_names: \
+        {set(self.ensure_numerical_cols) - set(self.column_names)}"
+
+        assert set(self.ensure_categorical_cols + self.ensure_numerical_cols) == set(self.column_names), \
+            f"all columns must be set either in `ensure_categorical_cols` or `ensure_numerical_cols`, missing cols: \
+               {set(self.column_names) - set(self.ensure_categorical_cols + self.ensure_numerical_cols)}"
 
     def split_data(self, split: Dict[str, float | int],
                    seed: Optional[int] = 1337,
