@@ -16,15 +16,27 @@ from tqdm import tqdm
 
 
 class Predictor:
+    """
+    The `Predictor` class is responsible for loading a trained model checkpoint and performing predictions
+    on new data using the `TabularTransformer` model.
+    """
+
     data_reader: DataReader
-    checkpoint: str
+    checkpoint: Path
     seed: int
     device_type: Literal['cuda', 'cpu']
     has_truth: bool
     batch_size: int
     save_as: Optional[str | Path]
 
-    def __init__(self, checkpoint: str = 'out/ckpt.pt'):
+    def __init__(self, checkpoint: str | Path = 'out/ckpt.pt'):
+        """
+        Initializes the Predictor with the specified Pytorch checkpoint.
+
+        Args:
+            checkpoint (str | Path): Path to the model checkpoint file. Defaults to 'out/ckpt.pt'.
+
+        """
         checkpoint_path = Path(checkpoint)
         assert checkpoint_path.exists(), \
             f"checkpoint file: {checkpoint} not exists. Abort."
@@ -34,7 +46,24 @@ class Predictor:
                 data_reader: DataReader,
                 batch_size: int = 1024,
                 save_as: Optional[str | Path] = None,
-                seed: int = 1337):
+                seed: int = 1337) -> pd.DataFrame:
+        """
+        Performs prediction on the input data using the loaded model checkpoint.
+        >>> prediction = predictor.predict(predict_data_reader)
+        >>> prediction.head(3)
+        >>> prediction.columns = ['id', 'price']
+        >>> prediction.to_csv('out/submission.csv', index=False)
+
+        Args:
+            data_reader (DataReader): DataReader instance to read the input data.
+            batch_size (int, optional): Batch size for prediction. Defaults to 1024.
+            save_as (Optional[str | Path], optional): File path to save the prediction results as a CSV file.
+                If None, results are not saved. Defaults to None.
+            seed (int, optional): Random seed for reproducibility. Defaults to 1337.
+
+        Returns:
+            pd.DataFrame: DataFrame containing prediction results.
+        """
 
         assert isinstance(data_reader, DataReader)
         self.data_reader = data_reader

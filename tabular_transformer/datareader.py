@@ -11,6 +11,15 @@ import inspect
 
 
 class DataReader():
+    r"""
+    A utility class for loading, processing, and splitting tabular data from CSV or Parquet files.
+
+    The `DataReader` serves as the entry point for the `tabular-transformer` processing pipeline, facilitating 
+    the ingestion of data. It distinguishes tabular columns as either CATEGORICAL or NUMERICAL. Categorical columns 
+    denote discrete categories (e.g., 'gender', 'color'), while numerical columns represent continuous values 
+    (e.g., 'age', 'income'). This classification is based on the semantic meaning of the columns rather than 
+    their stored data types, is determined by your understanding of the data and your discretion.
+    """
     file_path: Path
     ensure_categorical_cols: List[str]
     ensure_numerical_cols: List[str]
@@ -28,6 +37,39 @@ class DataReader():
                  id: Optional[str] = None,
                  header: bool = True,
                  column_names: Optional[List[str]] = None):
+        """
+        The `DataReader` acts as an interface for accessing and interpreting data. 
+        It classifies tabular columns as either CATEGORICAL or NUMERICAL. 
+        Categorical columns represent discrete categories (e.g., 'gender', 'color'), 
+        while numerical columns denote continuous values (e.g., 'age', 'income'). 
+        This classification is based on the semantic meaning of the columns rather than
+        their stored data types and is determined by your understanding of the data at your discretion.
+
+        DataReader instances are callable object, invoking them with new arguments to 
+        update settings returns a new DataReader instance configured accordingly. 
+        This feature is particularly handy for reusing configurations across datasets, 
+        such as when having similar training and testing datasets.
+        >>> test_data_reader = train_data_reader(file_path='new_path', label=None)
+
+        will return a DataReader instance with updated file_path and label
+
+        Args:
+            file_path (Union[str, Path]): Path to the data file.
+
+            ensure_categorical_cols (List[str], optional): Columns to treat as categorical.
+                If omitted or left empty, the default behavior is to treat all columns not explicitly specified in `ensure_numerical_cols` as categorical. Defaults to `[]`.
+
+            ensure_numerical_cols (List[str], optional): Columns to treat as numerical.
+                If omitted or left empty, the default behavior is to treat all columns not explicitly specified in `ensure_categorical_cols` as numerical. Defaults to `[]`.
+
+            label (Optional[str], optional): Name of the label column. Defaults to `None`.
+
+            id (Optional[str], optional): Name of the ID column. Defaults to `None`.
+
+            header (bool, optional): Indicates if the file contains a header row. Defaults to `True`.
+
+            column_names (Optional[List[str]], optional): Column names to use if `header` is `False`. Defaults to `None`.
+        """
         self.file_path = Path(file_path)
         self._check_file_types()
 
@@ -53,6 +95,17 @@ class DataReader():
             f"id column `{id}` must be `categorical`"
 
     def __call__(self, **kwargs):
+        """
+        Creates a new `DataReader` instance with updated parameters.
+
+        **Parameters:**
+
+        - **kwargs**: Keyword arguments corresponding to the `__init__` parameters.
+
+        **Returns:**
+
+        - A new instance of `DataReader` with the updated parameters.
+        """
         sig = inspect.signature(self.__init__)
         paras = [param.name for param in sig.parameters.values()
                  if param.name != 'self']
@@ -76,6 +129,18 @@ class DataReader():
         return self.__class__(**original_val)
 
     def read(self) -> pa.Table:
+        """
+        Loads the data file and returns it as a PyArrow Table.
+        To convert the returned table into a Pandas DataFrame,
+        use the `.to_pandas()` method.
+
+        >>> df = data_reader.read().to_pandas()
+        >>> df.head(3)
+
+        **Returns:**
+
+        - **table** (*pa.Table*): The data loaded into a PyArrow Table.
+        """
         cat_schema = [(col, pa.string())
                       for col in self.ensure_categorical_cols]
         num_schema = [(col, pa.float32())
@@ -177,7 +242,29 @@ class DataReader():
                    override: bool = True,
                    output_path: Optional[Path | str] = None,
                    save_as: Literal['csv', 'csv.gz', 'parquet'] = 'csv') -> Dict[str, Path]:
+        """
+        Splits the data into multiple parts for validation and test based on the provided ratios or counts.
 
+        Args:
+            split (Dict[str, float | int]): Dictionary specifying split names and their corresponding ratios or counts.
+                For example, 
+                `split={'train': 1_000_000, 'val': 0.2, 'test': -1}`
+                will partition the data into:
+                - `train`: 1,000,000 samples.
+                - `val`: 20% of the total samples.
+                - `test`: The remaining samples.
+
+            seed (Optional[int]): Random seed for shuffling the data before splitting. If `None`, no shuffling is performed. Defaults to `1337`.
+
+            override (bool): Whether to override existing split files. Defaults to `True`.
+
+            output_path (Optional[Path | str]): Directory to save the split files. Defaults to the data file's directory.
+
+            save_as (Literal['csv', 'csv.gz', 'parquet']): Format to save the split files. Defaults to `'csv'`.
+
+        Returns:
+            Dict[str, Path]: Dictionary mapping split names to their file paths.
+        """
         assert isinstance(split, dict), "`split` must be Dict[str, float|int]"
         assert save_as in ['csv', 'csv.gz', 'parquet']
 

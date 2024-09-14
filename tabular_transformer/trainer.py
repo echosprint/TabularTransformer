@@ -19,7 +19,9 @@ import copy
 
 
 class Trainer:
-
+    """
+    Trainer class responsible for training the TabularTransformer model.
+    """
     # parameters
     hp: HyperParameters  # hyper parameters
     tp: TrainParameters  # Train parameters
@@ -64,6 +66,13 @@ class Trainer:
     loss_rng: random.Random
 
     def __init__(self, hp: HyperParameters, ts: TrainSettings):
+        """
+        Initializes the Trainer with hyperparameters and training settings.
+
+        Args:
+            hp (HyperParameters): Hyperparameters for the model and optimizer.
+            ts (TrainSettings): Training settings.
+        """
         assert isinstance(hp, HyperParameters)
         assert isinstance(ts, TrainSettings)
         assert all('cuda' not in device
@@ -79,7 +88,15 @@ class Trainer:
               resume: bool = False,
               replace_output_head: Optional[bool] = None
               ):
+        """
+        Trains the model using the provided data reader and training parameters.
 
+        Args:
+            data_reader (DataReader): Data reader for loading the dataset.
+            tp (TrainParameters): Training parameters.
+            resume (bool, optional): Whether to resume training from a checkpoint. Defaults to False.
+            replace_output_head (Optional[bool], optional): Whether to replace the output head when resuming. Defaults to None.
+        """
         assert isinstance(data_reader, DataReader)
         assert isinstance(tp, TrainParameters)
         assert isinstance(resume, bool)
