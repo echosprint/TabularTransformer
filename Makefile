@@ -18,3 +18,9 @@ version:
 	git push; \
 	git tag v$$NEW_VERSION; \
 	git push --tags 
+
+
+.PHONY: paradoc
+
+paradoc:
+	python doc_tools.py tabular_transformer/hyperparameters.py > docs/hyperparameters.md
