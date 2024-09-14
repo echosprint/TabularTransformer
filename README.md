@@ -42,10 +42,8 @@ categorical_cols = [
     'relationship', 'race', 'sex',
     'native.country', 'income']
 
-numerical_cols = [
-    'age', 'fnlwgt', 'education.num',
-    'capital.gain', 'capital.loss',
-    'hours.per.week']
+# other columns are numerical, no need listed explicitly
+numerical_cols = []
 
 income_reader = ttf.DataReader(
     file_path=income_dataset_path,
