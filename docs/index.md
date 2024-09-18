@@ -23,4 +23,8 @@ The model consists of three main parts:
 
 These three components work together to encode tabular data in a way that captures the relationships and interactions between column features, ultimately producing a highly contextual embedding that enhances predictive performance.
 
+
+The diagram of the model is illustrated below.
+
+
 ![TabularTransformer architecture](assets/arch.svg)
