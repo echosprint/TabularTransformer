@@ -5,10 +5,14 @@ on:
     branches: [ "main" ]
     paths:
       - 'tabular_transformer/**'
+      - 'setup.py'
+      - 'test.py'
   pull_request:
     branches: [ "main" ]
     paths:
       - 'tabular_transformer/**'
+      - 'setup.py'
+      - 'test.py'
 
 jobs:
   test:
