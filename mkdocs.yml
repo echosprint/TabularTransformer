@@ -15,6 +15,7 @@ theme:
     - content.code.copy
     - search.highlight
     - content.code.select
+
 # Page tree
 nav:
   - Home: index.md
@@ -23,6 +24,7 @@ nav:
     - income analysis: income_analysis.md
   - HyperParameters: hyperparameters.md
   - Embedding: embedding.md
+
 # [Extensions]
 plugins:
   - search:
