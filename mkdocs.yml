@@ -19,11 +19,10 @@ theme:
 # Page tree
 nav:
   - Home: index.md
-  - Getting started:
-    - Installation: getting-started.md
-    - income analysis: income_analysis.md
+  - Getting started: getting-started.md
   - HyperParameters: hyperparameters.md
   - Embedding: embedding.md
+  - FAQ: faq.md
 
 # [Extensions]
 plugins:

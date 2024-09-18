@@ -134,8 +134,3 @@ predictor.predict(data_reader=IncomeDataReader(split['test']),
     samples: 6512, accuracy: 0.87
     save prediction output to file: out/prediction_output.csv
 
-
-
-```python
-
-```
