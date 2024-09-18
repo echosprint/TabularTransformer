@@ -9,3 +9,7 @@ TabularTransformer is a lightweight, end-to-end deep learning framework built wi
 - Native GPU support through PyTorch.
 - Minimal APIs to get started quickly.
 - Capable of handling large-scale data.
+
+## Architecture of TabularTransformer
+
+![TabularTransformer architecture](assets/arch.svg)
