@@ -2,7 +2,7 @@
 
 ## Welcome to TabularTransformer’s documentation!
 
-TabularTransformer is a lightweight, end-to-end deep learning framework built with PyTorch, leveraging the power of the Transformer architecture. It is designed to be scalable and efficient with the following advantages:
+TabularTransformer is a lightweight, end-to-end deep learning framework built with PyTorch that harnesses the Transformer architecture's capabilities for the tabular domain. It is designed to be scalable and efficient with the following advantages:
 
 - Streamlined workflow with no need for preprocessing or handling missing values.
 - Unleashing the power of Transformer on tabular data domain.
