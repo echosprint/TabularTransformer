@@ -150,7 +150,6 @@ Explanation of `Hyperparameters`:
 
    - n_layers=6: Defines the number of layers (or blocks) in the Transformer. Here, 6 layers provide the depth necessary for the model to learn intricate patterns in tabular data through sequential processing.
 
-In Train parameters, `max_iters`
 
 we define the training parameters for the `TabularTransformer` model using `ttf.TrainParameters`. Each parameter is crucial in guiding the model's training process:
 
