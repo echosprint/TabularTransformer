@@ -1,7 +1,7 @@
 # Embedding Pipeline
 **Unleashing the power of Transformers on tabular data: Embedding is all you need.**
 
-This document explains the embedding pipeline of TabularTransformer. It begins by classifying features into numerical and categorical types, followed by the process of calculating the overall feature vocabulary. Next, it outlines how features are mapped to integer tokens and describes normalization process for numerical features. Finally, combine Feature Token and Feature Value embeddings as input for Transformer, providing a clear understanding of the embedding process.
+This document outlines the embedding pipeline of TabularTransformer. It first classifies features as numerical or categorical, then calculates the overall feature vocabulary. Next, it details feature-to-token mapping and normalization of numerical features. Finally, it combines feature token embedding and feature value embeddings by addition as input for the Transformer, offering a clear view of the embedding process.
 
 ## Sample Tabular Data
 In the sample table below, `[UNK]` denotes missing or anomalous values.
