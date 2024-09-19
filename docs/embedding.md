@@ -1,7 +1,7 @@
 # Embedding Pipeline
 **Unleashing the power of Transformers on tabular data: Embedding is all you need.**
 
-This document explains the embedding pipeline of TabularTransformer. It begins by classifying features into numerical and categorical types, followed by the process of calculating the overall feature vocabulary. Next, it outlines how features are mapped to integer tokens. Finally, it describes normalization process for numerical features, providing a clear understanding of the embedding process.
+This document explains the embedding pipeline of TabularTransformer. It begins by classifying features into numerical and categorical types, followed by the process of calculating the overall feature vocabulary. Next, it outlines how features are mapped to integer tokens and describes normalization process for numerical features. Finally, combine Feature Token and Feature Value embeddings as input for Transformer, providing a clear understanding of the embedding process.
 
 ## Sample Tabular Data
 In the sample table below, `[UNK]` denotes missing or anomalous values.
@@ -19,7 +19,7 @@ Each feature (column) must be classified as one of the following types:
 - **Categorical**: `Categorical` columns represent discrete categories (e.g., 'gender', 'color')
 
 This classification is based on the semantic meaning of the columns rather than
-their stored data types and is determined by your understanding of the data at your discretion.
+their stored data types and is determined by your understanding of the data.
 
 ## Calculating Feature Vocabulary
 
@@ -79,11 +79,11 @@ Feature Value Embedding is achieved by mapping the normalized scalar value
 to an `n_dim` vector using a method similar to [Absolute Position Encoding](https://arxiv.org/abs/1706.03762).
 
 $$
-FVE_{(val, 2i)} = \sin\left(val * 10000^{\frac{2i}{n\_dim}}\right)
+FVE_{(val, 2i)} = \sin\left(val \times 10000^{\frac{2i}{n\_dim}}\right)
 $$
 
 $$
-FVE_{(val, 2i+1)} = \cos\left(val * 10000^{\frac{2i}{n\_dim}}\right)
+FVE_{(val, 2i+1)} = \cos\left(val \times 10000^{\frac{2i}{n\_dim}}\right)
 $$
 
 ## Embedding Combination
