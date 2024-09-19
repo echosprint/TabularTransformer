@@ -50,21 +50,6 @@ markdown_extensions:
   - pymdownx.details
   # - footnotes
 
-# extra_javascript:
-#   - mkdocs/javascripts/katex.js
-#   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.js
-#   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/contrib/auto-render.min.js
-# extra_css:
-#   - https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.7/katex.min.css
-#   - mkdocs/css/no-footer.css
-#   - mkdocs/cs
-# extra_javascript:
-#   - docs/javascripts/katex.js
-#   - https://unpkg.com/katex@0/dist/katex.min.js
-#   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
-
-# extra_css:
-#   - https://unpkg.com/katex@0/dist/katex.min.csss/unordered-list-symbols.css
 
 extra_javascript:
   - javascripts/katex.js
