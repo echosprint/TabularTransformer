@@ -37,7 +37,7 @@ first we need prepare the tabular dataset, here we use [Adult income dataset](ht
 income_dataset_path = ttf.prepare_income_dataset()
 ```
 
-TabularTransformer treats each column feature as either `Categorical` or `Numerical`. Here, we need to specify which columns fall into each category. For convenience, one of the lists can be left empty for convenience. In the snippet below, `numerical_cols` will includes all columns that are not specified as categorical.
+TabularTransformer treats each column feature as either `Categorical` or `Numerical`. Here, we need to specify which columns fall into each category. For convenience, one of the lists can be left empty. In the snippet below, `numerical_cols` will includes all columns that are not specified as categorical.
 
 
 ```python
