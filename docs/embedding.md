@@ -14,9 +14,11 @@ In the sample table below, `[UNK]` denotes missing or anomalous values.
 | Artist     | 35    | Los Angeles   | [UNK]     |
 
 ## Feature Types
+
 Each feature (column) must be classified as one of the following types:
-  - **Numerical**: continuous values (e.g., 'age', 'income')
-  - **Categorical**: discrete categories (e.g., 'gender', 'color')
+
+- **Numerical**: continuous values (e.g., 'age', 'income')
+- **Categorical**: discrete categories (e.g., 'gender', 'color')
 
 This classification is based on the semantic meaning of the columns rather than
 their stored data types and is determined by your understanding of the data.
