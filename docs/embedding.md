@@ -79,9 +79,9 @@ Feature Value Embedding is achieved by mapping the normalized scalar value
 to an `n_dim` vector using a method similar to Absolute Position Encoding.
 
 $$
-FVE_{(val, 2i)} = \sin\left(val * 10000^{\frac{2i}{n_{dim}}}\right)
+FVE_{(val, 2i)} = \sin\left(val * 10000^{\frac{2i}{n_dim}}\right)
 $$
 
 $$
-FVE_{(val, 2i+1)} = \cos\left(val * 10000^{\frac{2i}{n_{dim}}}\right)
+FVE_{(val, 2i+1)} = \cos\left(val * 10000^{\frac{2i}{n_dim}}\right)
 $$
