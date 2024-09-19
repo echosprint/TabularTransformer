@@ -60,7 +60,7 @@ These tokens, represented as integers, are then used in the embedding process of
 - **UNK**: Assign a value of `1.0`.
 
 
-if `apply_power_transform` is `True`, apply the transform as follows.
+if `apply_power_transform` is `True`, apply the transform before normalization.
 
 ```python
 def power_transform(value):
