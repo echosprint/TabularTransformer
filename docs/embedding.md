@@ -75,6 +75,7 @@ def power_transform(value):
 | 1.0        | 0.5774 | 1.0  | 1.0     |
 
 
+
 $$
 PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{\frac{2i}{d_{model}}}}\right)
 $$
