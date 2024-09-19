@@ -59,7 +59,7 @@ markdown_extensions:
 #   - mkdocs/css/no-footer.css
 #   - mkdocs/cs
 extra_javascript:
-  - javascripts/katex.js
+  - docs/javascripts/katex.js
   - https://unpkg.com/katex@0/dist/katex.min.js
   - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
 
