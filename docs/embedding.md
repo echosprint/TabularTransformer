@@ -15,8 +15,8 @@ In the sample table below, `[UNK]` denotes missing or anomalous values.
 
 ## Feature Types
 Each feature (column) must be classified as one of the following types:
-- **Numerical**: `Numerical` columns denote continuous values (e.g., 'age', 'income')
-- **Categorical**: `Categorical` columns represent discrete categories (e.g., 'gender', 'color')
+  - **Numerical**: continuous values (e.g., 'age', 'income')
+  - **Categorical**: discrete categories (e.g., 'gender', 'color')
 
 This classification is based on the semantic meaning of the columns rather than
 their stored data types and is determined by your understanding of the data.
