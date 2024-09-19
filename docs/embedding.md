@@ -25,7 +25,6 @@ their stored data types and is determined by your understanding of the data.
 
 ## Calculating Feature Vocabulary
 
-**The calculated feature size for this tabular data is 11.**
 
 ### Feature Vocabulary
 | Feature              | Index |
@@ -57,7 +56,8 @@ These tokens, represented as integers, are then used in the embedding process of
 
 ## Feature Values
 - **Categorical features**: Assign a value of `1.0`.
-- **Numerical features**: (excluding `[UNK]`) are assigned their z-score normalized values.
+- **Numerical features**: Assign their z-score normalized values.
+- **\\[UNK\\]**: Assign a value of `1.0`.
 
 
 if `apply_power_transform` is `True`, apply the transform as follows.
