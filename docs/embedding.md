@@ -76,7 +76,7 @@ def power_transform(value):
 
 
 Feature Value Embedding is achieved by mapping the normalized scalar value 
-to an `n_dim` vector using a method similar to Absolute Position Encoding.
+to an `n_dim` vector using a method similar to [Absolute Position Encoding](https://arxiv.org/abs/1706.03762).
 
 $$
 FVE_{(val, 2i)} = \sin\left(val * 10000^{\frac{2i}{n_dim}}\right)
@@ -85,3 +85,7 @@ $$
 $$
 FVE_{(val, 2i+1)} = \cos\left(val * 10000^{\frac{2i}{n_dim}}\right)
 $$
+
+## Embedding Combination
+
+After the two-step embedding of Feature Token and Feature Value, we obtain two tensors with the shape $(n_{row}, n_{col}, n_{dim})$. We then combine these tensors by adding them together to serve as the input to the transformer.
