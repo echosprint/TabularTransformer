@@ -1,7 +1,7 @@
 .PHONY: nbconvert
 
 nbconvert:
-	jupyter nbconvert --to markdown income_analysis.ipynb --output-dir=./docs
+	jupyter nbconvert --to markdown ./notebooks/supervised_training.ipynb --output-dir=./docs
 
 	
 VERSION=$(shell python setup.py --version)
