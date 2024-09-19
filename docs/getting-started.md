@@ -95,7 +95,7 @@ test_data_reader = income_reader(file_path=split['test'])
 
 ## Model Training
 
-This part involves specifying the device for computation (CPU or GPU) and the data type to be used for training.
+Specify the device for computation (CPU or GPU) and the data type to be used for training.
 
 Detect whether `gpu` cuda is available for accelerating, if not, default to `cpu`
 
