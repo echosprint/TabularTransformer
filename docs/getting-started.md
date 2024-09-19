@@ -10,15 +10,7 @@ TabularTransformer is an end-to-end training framework that processes data as-is
 
 you can check out the [notebook](https://github.com/echosprint/TabularTransformer/blob/main/notebooks/supervised_training.ipynb) to run locally.
 
-
-**for more details about the [TabularTransformer](https://github.com/echosprint/TabularTransformer) model**,
-ckeck the online **[Documents](https://echosprint.github.io/TabularTransformer/)**
-
-
-- This notebook provides a usage example of the
-  [TabularTransformer](https://github.com/echosprint/TabularTransformer)
-  package.
-- Hyperparameters are not tuned and may be suboptimal.
+Please note that the hyperparameters used here are not optimized and may be suboptimal.
 
 ## Setup
 First, we need to install the `tabular-transformer` packages.
