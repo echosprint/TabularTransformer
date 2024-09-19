@@ -75,13 +75,13 @@ def power_transform(value):
 | 1.0        | 0.5774 | 1.0  | 1.0     |
 
 
-Feature Value Embedding is implemented by map the scalar normalized value to `n_dim` vector
-use method similar to Absolute Position Encoding.
+Feature Value Embedding is achieved by mapping the normalized scalar value 
+to an `n_dim` vector using a method similar to Absolute Position Encoding.
 
 $$
-FVE_{(val, 2i)} = \sin\left(val * 10000^{\frac{2i}{d_{model}}}\right)
+FVE_{(val, 2i)} = \sin\left(val * 10000^{\frac{2i}{n_{dim}}}\right)
 $$
 
 $$
-FVE_{(val, 2i+1)} = \cos\left(val * 10000^{\frac{2i}{d_{model}}}\right)
+FVE_{(val, 2i+1)} = \cos\left(val * 10000^{\frac{2i}{n_{dim}}}\right)
 $$
