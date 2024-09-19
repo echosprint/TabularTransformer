@@ -1,8 +1,8 @@
 # Supervised training using [tabular-transformer](https://github.com/echosprint/TabularTransformer)
 
-This notebook demonstrates how to use the TabularTransformer, a lightweight deep learning framework implemented with pure python, to handle tabular data prediction task efficiently. We will walk through data preparation, model training, and prediction using a sample dataset.
+This notebook demonstrates how to use the TabularTransformer to handle tabular data prediction task efficiently. We will walk through data preparation, model training, and prediction using a sample dataset.
 
-TabularTransformer is an end-to-end training framework that processes data as-is, eliminating the cumbersome task of handcrafting intermediate features and complexity of preprocessing, providing an competent alternative of tree-based models dealing with tabular data.
+TabularTransformer is an end-to-end training framework that processes data as it is, eliminating the cumbersome of handcrafting intermediate features and complexity of preprocessing, providing an competent alternative of tree-based models dealing with tabular data.
 
 <a target="_blank" href="https://colab.research.google.com/github/echosprint/TabularTransformer/blob/main/notebooks/supervised_training.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
