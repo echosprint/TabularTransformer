@@ -57,7 +57,7 @@ These tokens, represented as integers, are then used in the embedding process of
 ## Feature Values
 - **Categorical features**: Assign a value of `1.0`.
 - **Numerical features**: Assign their z-score normalized values.
-- **\\[UNK\\]**: Assign a value of `1.0`.
+- **[UNK]**: Assign a value of `1.0`.
 
 
 if `apply_power_transform` is `True`, apply the transform as follows.
