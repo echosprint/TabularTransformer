@@ -68,9 +68,9 @@ Using the Feature Vocabulary, we convert the original tabular data into a table 
 These indices will be used with an embedding layer (e.g., PyTorch's `nn.Embedding`) to obtain vector representations of the feature tokens.
 
 ```python
-feature_vocab_size = len(Feature_Vocabulary_Table)
+feature_vocab_size = len(feature_vocabulary_table)
 embedding = nn.Embedding(feature_vocab_size, n_dim)
-Feature_Token_Embeddings = embedding(Feature_Tokens_Table)
+feature_token_embeddings = embedding(feature_tokens_table)
 # shape (n_row, n_col, n_dim)
 ```
 
