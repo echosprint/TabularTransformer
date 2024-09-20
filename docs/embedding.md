@@ -78,7 +78,7 @@ feature_token_embeddings = embedding(feature_tokens_table)
 
 For each feature, we also compute a **Feature Value**, which captures the magnitude of the feature.
 
-### Assigning Values to Missing Values
+### Assigning Values to [UNK]
 
 - **Missing or Unknown Values (`[UNK]`)**: Assign a default value of `1.0`.
 
