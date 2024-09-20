@@ -65,7 +65,7 @@ income_reader = ttf.DataReader(
 ```
 
 
-Optionally, we can split the data into training and testing sets if a testing set is not already available. This dataset contains a mix of numeric, categorical, and missing features. `tabular-transformer` processes the data as is, so no preprocessing is required. Here, we split 20% of the data as the testing set and use the remaining 80% for training.
+Optionally, we can split the data into training and testing sets if a testing set is not already available. This dataset contains a mix of numerical, categorical, and missing features. `tabular-transformer` processes the data as is, so no preprocessing is required. Here, we split 20% of the data as the testing set and use the remaining 80% for training.
 
 
 ```python
