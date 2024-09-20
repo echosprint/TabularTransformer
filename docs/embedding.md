@@ -109,17 +109,14 @@ Note: The numerical values here are illustrative; in practice, you would compute
 
 To represent the Feature Values as embeddings, we map each normalized scalar value to a high-dimensional vector using a method similar to [Absolute Position Encoding](https://arxiv.org/abs/1706.03762) used in Transformers.
 
-Feature Value Embedding is achieved by mapping the normalized scalar value 
-to an `n_dim` vector using a method similar to [Absolute Position Encoding](https://arxiv.org/abs/1706.03762).
-
 For each value $val$, and for dimensions $i$ in $0$ to $\frac{n_{dim}}{2}​​−1$, we compute:
 
 $$
-FVE_{(val, 2i)} = \sin\left(val \times 10000^{\frac{2i}{n\_dim}}\right)
+FVE_{(val, 2i)} = \sin\left(val \times 10000^{\frac{2i}{n_{dim}}}\right)
 $$
 
 $$
-FVE_{(val, 2i+1)} = \cos\left(val \times 10000^{\frac{2i}{n\_dim}}\right)
+FVE_{(val, 2i+1)} = \cos\left(val \times 10000^{\frac{2i}{n_{dim}}}\right)
 $$
 
 This results in a vector of size $n_{dim}$ that encodes the scalar value in a way that the model can understand.
@@ -127,13 +124,13 @@ This results in a vector of size $n_{dim}$ that encodes the scalar value in a wa
 ## Combining Embeddings
 
 After obtaining the embeddings for Feature Tokens and Feature Values, we have two tensors:
-  - **Feature Token Embeddings**: Shape $(n_{row}, n_{col}, n_{dim})$
-  - **Feature Value Embeddings**: Shape $(n_{row}, n_{col}, n_{dim})$
+- **Feature Token Embeddings**: Shape $(n_{row}, n_{col}, n_{dim})$
+- **Feature Value Embeddings**: Shape $(n_{row}, n_{col}, n_{dim})$
 
 We combine these embeddings by element-wise addition to form the final input tensor to the Transformer:
 
 $$
-\frac{Input}{Transformer​}=Feature Token Embeddings + Feature Value Embeddings
+{Input}_{Transformer​}=Feature Token Embeddings + Feature Value Embeddings
 $$
 
 This combined embedding incorporates both the identity of the feature (through the token embedding) and its value (through the value embedding), enabling the Transformer to effectively process tabular data.
