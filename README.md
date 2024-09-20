@@ -42,7 +42,7 @@ categorical_cols = [
     'relationship', 'race', 'sex',
     'native.country', 'income']
 
-# other columns are numerical, no need listed explicitly
+# all remaining columns are numerical
 numerical_cols = []
 
 income_reader = ttf.DataReader(
