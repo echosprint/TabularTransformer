@@ -101,7 +101,7 @@ def power_transform(value):
 
 ### Feature Values Table
 
-After applying optional power transform and normalization, we obtain the following Feature Values:
+After assigning default values to [UNK] and categorical features, and optionally applying power transformation and normalization to numerical features, we obtain the following feature values:
 
 | Occupation | Age    | City | Income  |
 |------------|--------|------|---------|
