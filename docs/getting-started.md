@@ -1,26 +1,26 @@
 # Supervised training using [tabular-transformer](https://github.com/echosprint/TabularTransformer)
 
-This notebook demonstrates how to use the TabularTransformer to handle tabular data prediction task efficiently. We will walk through data preparation, model training, and prediction using a sample dataset.
+This notebook demonstrates how to use the TabularTransformer to efficiently handle a tabular data prediction task. We will walk through data preparation, model training, and prediction using a sample dataset.
 
-TabularTransformer is an end-to-end training framework that processes data as it is, eliminating the cumbersome of handcrafting intermediate features and complexity of preprocessing, providing an competent alternative of tree-based models dealing with tabular data.
+TabularTransformer is an end-to-end training framework that processes raw data directly, eliminating the need for handcrafted features and complex preprocessing steps. It provides a competitive alternative to tree-based models for handling tabular data.
 
 <a target="_blank" href="https://colab.research.google.com/github/echosprint/TabularTransformer/blob/main/notebooks/supervised_training.ipynb">
   <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
 </a>
 
-you can check out the [notebook](https://github.com/echosprint/TabularTransformer/blob/main/notebooks/supervised_training.ipynb) to run locally.
+Alternatively, you can check out the [notebook](https://github.com/echosprint/TabularTransformer/blob/main/notebooks/supervised_training.ipynb) to run it locally.
 
 Please note that the hyperparameters used here are not optimized and may be suboptimal.
 
 ## Setup
-First, we need to install the `tabular-transformer` packages.
+First, we need to install the `tabular-transformer` package.
 
 
 ```python
 %pip install tabular-transformer
 ```
 
-import necessary modules
+Next, we import the necessary modules.
 
 
 ```python
@@ -29,9 +29,8 @@ import torch
 ```
 
 ## Data Preparation
-first we need prepare the tabular dataset, here we use [Adult income dataset](https://huggingface.co/datasets/scikit-learn/adult-census-income) for convenience. The prediction task is to determine whether a person makes over $50K a year. The dataset has
-32.6k rows and 15 columns, the label column is `income`.
 
+We will use the [Adult Income dataset](https://huggingface.co/datasets/scikit-learn/adult-census-income) for our prediction task, which aims to determine whether a person makes over $50K a year. The dataset contains 32.6k rows and 15 columns, with the label column named `income`.
 
 ```python
 income_dataset_path = ttf.prepare_income_dataset()
@@ -47,11 +46,11 @@ categorical_cols = [
     'relationship', 'race', 'sex',
     'native.country', 'income']
 
-# all the rest columns are numerical, no need listed explicitly
+# all remaining columns are numerical
 numerical_cols = []
 ```
 
-To properly instruct `tabular_transformer` on how to handle the data, we define an instance of the `DataReader`. This instance specifies which columns are categorical, which are numerical, and handles other data-related settings such as file paths, label column, whether header exists, id column etc. 
+To properly instruct `tabular-transformer` on how to handle the data, we define an instance of the `DataReader`. This instance specifies which columns are categorical, which are numerical, and handles other data-related settings such as file paths, label column, header presence, ID column, etc. 
 
 
 ```python
@@ -65,12 +64,8 @@ income_reader = ttf.DataReader(
 )
 ```
 
-Optionally we can split into training and testing sets if testing set is not available yet.
 
-This dataset contains a mix of numeric, categorical and missing features. tabular-transformer treats the data as it is, and no preprocessing is required.
-
-Here we split the 20% of data as testing set, the rest as training set.
-
+Optionally, we can split the data into training and testing sets if a testing set is not already available. This dataset contains a mix of numeric, categorical, and missing features. `tabular-transformer` processes the data as is, so no preprocessing is required. Here, we split 20% of the data as the testing set and use the remaining 80% for training.
 
 
 ```python
@@ -95,10 +90,7 @@ test_data_reader = income_reader(file_path=split['test'])
 
 ## Model Training
 
-Specify the device for computation (CPU or GPU) and the data type to be used for training.
-
-Detect whether `gpu` cuda is available for accelerating, if not, default to `cpu`
-
+Next, we specify the device for computation (CPU or GPU) and the data type to be used for training. We detect whether CUDA is available for acceleration; if not, we default to CPU.
 
 ```python
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -106,10 +98,7 @@ dtype = 'bfloat16' if torch.cuda.is_available() \
     and torch.cuda.is_bf16_supported() else 'float16'
 ```
 
-Define parameters for model and training
-
-Sets up the training settings using `ttf.TrainSettings`. These settings define various configurations that guide the model's training behavior:
-
+We set up the training settings using `ttf.TrainSettings`. These settings define various configurations that guide the model's training behavior:
 
 ```python
 ts = ttf.TrainSettings(
@@ -122,18 +111,16 @@ ts = ttf.TrainSettings(
 
 Explanation of Parameters:
 
-   - device=device: Specifies the device (CPU or GPU) on which the training will be executed. Using a GPU (if available) can significantly speed up the training process.
+- device: Specifies the device (CPU or GPU) on which the training will be executed. Using a GPU (if available) can significantly speed up the training process.
 
-   - dtype=dtype: Defines the data type (e.g., torch.float32, torch.bfloat16) used during training, which can impact memory usage and computational performance.
+- dtype: Defines the data type (e.g., torch.float32, torch.bfloat16) used during training, which can impact memory usage and computational performance.
 
-   - apply_power_transform=True: Indicates whether a power transformation should be applied to numerical features. This can help stabilize variance, making the data more suitable for training.
+- apply_power_transform: Indicates whether a power transformation should be applied to numerical features. This can help stabilize variance, making the data more suitable for training.
 
-   - min_cat_count=0.02: Sets the minimum count (as a proportion) for categorical values. Categories occurring less frequently than this threshold will be labeled as `unknown`, which helps in managing rare categories effectively.
+- min_cat_count: Sets the minimum count (as a proportion) for categorical values. Categories occurring less frequently than this threshold will be labeled as unknown, which helps in managing rare categories effectively.
 
-It is Transformer and MLP under the hood, specify the model hyperparameters
 
-In the code snippet below, we define the model's hyperparameters using `ttf.HyperParameters`. These parameters determine the architecture and capacity of the `TabularTransformer` model:
-
+Next, we define the model's hyperparameters using `ttf.HyperParameters`. These parameters determine the architecture and capacity of the TabularTransformer model:
 
 ```python
 hp = ttf.HyperParameters(
@@ -141,17 +128,16 @@ hp = ttf.HyperParameters(
     n_heads=8,
     n_layers=6)
 ```
+Explanation of Hyperparameters:
 
-Explanation of `Hyperparameters`:
+- dim: Sets the dimensionality of the embeddings in the Transformer. A value of 64 indicates that each embedding vector will have 64 dimensions, influencing the model's capacity to capture complex patterns in the data.
 
-   - dim=64: This sets the dimensionality of the embeddings in the Transformer. A value of 64 indicates that each embedding vector will have 64 dimensions, which influences the model's capacity to capture complex patterns in the data.
+- n_heads: Specifies the number of attention heads in each multi-head attention layer. Using 8 heads allows the model to focus on different parts of the input sequence simultaneously, capturing diverse relationships within the data.
 
-   - n_heads=8: Specifies the number of attention heads in each multi-head attention layer. Using 8 heads allows the model to focus on different parts of the input sequence simultaneously, capturing diverse relationships within the data.
-
-   - n_layers=6: Defines the number of layers (or blocks) in the Transformer. Here, 6 layers provide the depth necessary for the model to learn intricate patterns in tabular data through sequential processing.
+- n_layers: Defines the number of layers (or blocks) in the Transformer. Here, 6 layers provide the depth necessary for the model to learn intricate patterns in tabular data through sequential processing.
 
 
-we define the training parameters for the `TabularTransformer` model using `ttf.TrainParameters`. Each parameter is crucial in guiding the model's training process:
+We then define the training parameters for the TabularTransformer model using `ttf.TrainParameters`. Each parameter is crucial in guiding the model's training process:
 
 
 ```python
@@ -165,27 +151,26 @@ tp = ttf.TrainParameters(
 
 Explanation of Parameters:
 
-  -  max_iters=3000: This sets the maximum number of iterations for training. It determines how many times the model will go through the training data.
+- max_iters: Sets the maximum number of iterations for training, determining how many times the model will go through the training data.
 
-  - learning_rate=5e-4: The learning rate controls the step size during model weight updates. A smaller value like 5e-4 ensures the model learns gradually, reducing the risk of overshooting the optimal solution.
+- learning_rate: Controls the step size during model weight updates. A smaller value like 5e-4 ensures the model learns gradually, reducing the risk of overshooting the optimal solution.
 
-  - output_dim=1: Specifies the dimension of the model's output. Here, it is set to 1, which is typical for binary classification or regression tasks.
+- output_dim: Specifies the dimension of the model's output. Here, it is set to 1, which is typical for binary classification or regression tasks.
 
-  - loss_type='BINCE': Indicates the loss function to be used during training. 'BINCE' stands for Binary Cross-Entropy, commonly used for binary classification problems.
+- loss_type: Indicates the loss function to be used during training. `BINCE` stands for Binary Cross-Entropy, commonly used for binary classification problems.
 
-  - batch_size=128: The number of samples processed in each iteration. A batch size of 128 balances the need for stable gradient estimates and computational efficiency.
+- batch_size: The number of samples processed in each iteration. A batch size of 128 balances the need for stable gradient estimates and computational efficiency.
 
-  - eval_interval=100: The model will be evaluated on the validation set every 100 iterations, allowing you to monitor its performance regularly during training.
+- eval_interval: The model will be evaluated on the validation set every 100 iterations, allowing you to monitor its performance regularly during training.
 
-  - eval_iters=20: Defines the number of iterations used during the evaluation phase. It helps average the performance over several mini-batches to get a more stable evaluation metric.
+- eval_iters: Defines the number of iterations used during the evaluation phase. It helps average the performance over several mini-batches to get a more stable evaluation metric.
 
-  - warmup_iters=100: Specifies a warm-up phase for the first 100 iterations where the learning rate gradually increases to its set value. This technique helps stabilize the initial training phase.
+- warmup_iters: Specifies a warm-up phase for the first 100 iterations where the learning rate gradually increases to its set value. This technique helps stabilize the initial training phase.
 
-  - validate_split=0.2: The proportion of the dataset reserved for validation. Here, 20% of the data will be used to validate the model's performance during training, ensuring that the model is not overfitting.
+- validate_split: The proportion of the dataset reserved for validation. Here, 20% of the data will be used to validate the model's performance during training, ensuring that the model is not overfitting.
 
-we create a `ttf.Trainer` instance and initiate the training process for the `TabularTransformer` model.
 
-We will train the model using a one-liner.
+Finally, we create a `ttf.Trainer` instance and initiate the training process for the TabularTransformer model. We will train the model using a one-liner.
 
 
 ```python
