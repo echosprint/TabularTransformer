@@ -1,0 +1,77 @@
+/* Basic table styling for Colab-like appearance */
+table {
+    border-collapse: collapse;
+    margin: 25px 0;
+    font-size: 16px;
+    font-family: 'Roboto', sans-serif;
+    width: 100%;
+    max-width: 100%;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Header styling */
+table thead th {
+    background-color: #4caf50; /* Colab-like green header */
+    color: white;
+    text-align: left;
+    padding: 12px 15px;
+    font-weight: bold;
+}
+
+/* Table body rows */
+table tbody tr {
+    border-bottom: 1px solid #ddd;
+}
+
+/* Zebra stripes on alternating rows */
+table tbody tr:nth-of-type(even) {
+    background-color: #f3f3f3;
+}
+
+/* Table cells */
+table td, table th {
+    padding: 12px 15px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+/* Hover effect on rows */
+table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Make the table responsive on smaller screens */
+@media screen and (max-width: 768px) {
+    table {
+        width: 100%;
+    }
+
+    table thead {
+        display: none; /* Hide the header */
+    }
+
+    table tbody tr {
+        display: block;
+        margin-bottom: 20px;
+    }
+
+    table tbody tr td {
+        display: block;
+        text-align: right;
+        padding-left: 50%;
+        position: relative;
+    }
+
+    table tbody tr td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        padding-left: 15px;
+        font-weight: bold;
+        text-align: left;
+    }
+}
+
