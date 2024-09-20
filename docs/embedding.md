@@ -88,9 +88,9 @@ For each feature, we also compute a **Feature Value**, which captures the magnit
 
 - **Numerical Features**:
 
-  * **Power Transform (Optional)**: If `apply_power_transform` is set to `True`, a power transform is applied to make the data more Gaussian-like before normalization. This can help stabilize variance and minimize skewness.
+    - **Power Transform (Optional)**: If `apply_power_transform` is set to `True`, a power transform is applied to make the data more Gaussian-like before normalization. This can help stabilize variance and minimize skewness.
 
-  * **Normalization**: Numerical features are normalized using z-score normalization to ensure they have zero mean and unit variance.
+    - **Normalization**: Numerical features are normalized using z-score normalization to ensure they have zero mean and unit variance.
 
 
 ```python
