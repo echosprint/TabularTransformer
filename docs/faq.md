@@ -1,4 +1,3 @@
-## FAQ
 
 ### Why do I need TabularTransformer?
 
