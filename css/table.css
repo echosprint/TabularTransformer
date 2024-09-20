@@ -1,0 +1,78 @@
+/* Material-inspired table styling */
+table {
+    border-collapse: collapse;
+    margin: 15px 0;
+    font-size: 14px;
+    font-family: 'Roboto', sans-serif;
+    width: 100%;
+    max-width: 100%;
+    background-color: #ffffff;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24); /* Material shadow */
+}
+
+/* Header styling with new color */
+table thead th {
+    background-color: #2196F3; /* Light blue background */
+    color: #ffffff; /* White text */
+    text-align: left;
+    padding: 8px 10px;
+    font-weight: bold;
+    font-size: 14px;
+    border-bottom: 2px solid #1976D2; /* Darker blue for bottom border */
+}
+
+/* Table body rows */
+table tbody tr {
+    border-bottom: 1px solid #e0e0e0;
+}
+
+/* Zebra stripes for alternate rows */
+table tbody tr:nth-of-type(even) {
+    background-color: #fafafa;
+}
+
+/* Table cells */
+table td, table th {
+    padding: 8px 10px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+/* Hover effect on rows */
+table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Make the table responsive */
+@media screen and (max-width: 768px) {
+    table {
+        width: 100%;
+    }
+
+    table thead {
+        display: none;
+    }
+
+    table tbody tr {
+        display: block;
+        margin-bottom: 10px;
+    }
+
+    table tbody tr td {
+        display: block;
+        text-align: right;
+        padding-left: 40%;
+        position: relative;
+    }
+
+    table tbody tr td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0;
+        padding-left: 10px;
+        font-weight: bold;
+        text-align: left;
+    }
+}
