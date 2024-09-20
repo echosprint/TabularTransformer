@@ -124,6 +124,7 @@ This results in a vector of size $n_{dim}$ that encodes the scalar value in a wa
 ## Combining Embeddings
 
 After obtaining the embeddings for Feature Tokens and Feature Values, we have two tensors:
+
 - **Feature Token Embeddings**: Shape $(n_{row}, n_{col}, n_{dim})$
 - **Feature Value Embeddings**: Shape $(n_{row}, n_{col}, n_{dim})$
 
