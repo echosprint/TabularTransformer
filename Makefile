@@ -24,3 +24,17 @@ version:
 
 paradoc:
 	python doc_tools.py tabular_transformer/hyperparameters.py > docs/hyperparameters.md
+
+
+
+
+# Run a specific notebook
+run:
+	@NOTEBOOK=$(word 2,$(MAKECMDGOALS)); \
+	if [ "$$NOTEBOOK" = "" ]; then \
+		echo "Usage: make run notebook.ipynb"; \
+		exit 1; \
+	else \
+		echo "Executing $$NOTEBOOK..."; \
+		jupyter nbconvert --to notebook --stdout --execute "$$NOTEBOOK"; \
+	fi
