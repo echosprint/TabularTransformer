@@ -298,6 +298,9 @@ class Trainer:
             iter_num += 1
 
             if iter_num > self.tp.max_iters:
+                if self.tp.always_save_checkpoint:
+                    self._save_checkpoint(
+                        iter_num, best_val_loss, config)
                 break
 
     def _log(self, wandb, iter_num, losses, lr, running_mfu):
