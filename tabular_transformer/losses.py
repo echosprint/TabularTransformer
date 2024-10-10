@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import math
+import torch.nn.functional as F
 
 
 class SupConLoss(nn.Module):
@@ -66,3 +66,39 @@ def logsumexp(x, logits_mask, dim=1, keepdim=True):
     x = x.masked_fill(~logits_mask.bool(), torch.finfo(x.dtype).min)
     output = torch.logsumexp(x, dim=dim, keepdim=keepdim)
     return output
+
+
+class RankLoss(nn.Module):
+    def __init__(self):
+        super(RankLoss, self).__init__()
+
+    def forward(self, pred_scores, true_ranks):
+        """
+        Calculate pairwise rank loss between predicted scores and true ranks.
+
+        Args:
+            pred_scores: Tensor of predicted scores (1D tensor).
+            true_ranks: Tensor of true ranks (1D tensor with rank values).
+
+        Returns:
+            loss: Computed loss value.
+        """
+
+        assert pred_scores.dim() == 1, "`pred_scores` must be a 1D tensor"
+        assert true_ranks.dim() == 1, "`true_ranks` must be a 1D tensor"
+        assert pred_scores.size(0) == true_ranks.size(0), \
+            "`pred_scores` and `true_ranks` must have the same length"
+
+        # Compute pairwise score differences
+        predict_diff = pred_scores.unsqueeze(1) - pred_scores.unsqueeze(0)
+
+        # Compute pairwise rank differences
+        rank_diff = torch.sign(
+            true_ranks.unsqueeze(0) - true_ranks.unsqueeze(1))
+
+        # Convert rank differences to binary format for BCE (0 or 1)
+        truth = 0.5 * (rank_diff + 1.0)
+
+        # Compute loss using BCEWithLogitsLoss
+        loss = F.binary_cross_entropy_with_logits(predict_diff, truth)
+        return loss
